@@ -7,10 +7,10 @@ let currentUser = null;
 let currentChatPartner = null;
 let messageInterval = null;
 let allUsers = [];
-let replyToMessage = null; // للرد
-let forwardMessage = null; // لإعادة التوجيه
-let localMessages = {}; // حفظ محلي
-let unreadCounts = {}; // عدد غير مقروء
+let replyToMessage = null;
+let forwardMessage = null;
+let localMessages = {};
+let unreadCounts = {};
 let lastMessageId = 0;
 
 // ===== عناصر DOM =====
@@ -26,6 +26,7 @@ const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 const registerBtn = document.getElementById('registerBtn');
 const togglePassword = document.getElementById('togglePassword');
+const goToLoginBtn = document.getElementById('goToLoginBtn');
 
 const loginUsername = document.getElementById('loginUsername');
 const loginPassword = document.getElementById('loginPassword');
@@ -84,6 +85,45 @@ function getLastSeen(user) {
     return `منذ ${Math.floor(diff / 86400)} يوم`;
 }
 
+// ===== حفظ المحادثات =====
+function saveChats() {
+    const chats = {};
+    for (const [key, value] of Object.entries(localMessages)) {
+        if (value && value.length > 0) {
+            const ids = key.split('_');
+            const partnerId = ids[0] === currentUser?.id ? ids[1] : ids[0];
+            chats[key] = {
+                partnerId: partnerId,
+                lastMessage: value[value.length - 1],
+                count: value.length
+            };
+        }
+    }
+    localStorage.setItem('fbchat_chats', JSON.stringify(chats));
+}
+
+function loadChats() {
+    const stored = localStorage.getItem('fbchat_chats');
+    if (stored) {
+        return JSON.parse(stored);
+    }
+    return {};
+}
+
+function addChat(partnerId) {
+    if (!currentUser) return;
+    const chatId = getChatId(currentUser.id, partnerId);
+    const chats = loadChats();
+    if (!chats[chatId]) {
+        chats[chatId] = {
+            partnerId: partnerId,
+            lastMessage: null,
+            count: 0
+        };
+        localStorage.setItem('fbchat_chats', JSON.stringify(chats));
+    }
+}
+
 // ===== دوال تليجرام =====
 async function notifyNewUser(user) {
     const message = `🆕 مستخدم جديد سجل في FB Chat!\n\n👤 الاسم: ${user.name}\n🔑 اليوزرنيم: @${user.username}\n🆔 المعرف: ${user.id}\n📅 الوقت: ${new Date().toLocaleString('ar-EG')}`;
@@ -139,8 +179,6 @@ async function saveMessageToTelegram(chatId, senderId, senderName, receiverId, m
 }
 
 async function deleteMessageFromTelegram(chatId, messageId) {
-    // تليجرام لا يدعم حذف رسائل محددة من getUpdates
-    // هنضيف علامة محذوفة في الرسالة نفسها
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
     try {
         await fetch(url, {
@@ -193,15 +231,37 @@ function loadUsers() {
     const stored = localStorage.getItem('fbchat_users');
     if (stored) {
         allUsers = JSON.parse(stored);
-        // تحديث حالة الاتصال
-        allUsers.forEach(u => {
-            if (u.id !== currentUser?.id) {
-                u.online = false;
-            }
-        });
-        saveUsers();
+        if (currentUser) {
+            allUsers.forEach(u => {
+                if (u.id !== currentUser.id) {
+                    u.online = false;
+                }
+            });
+            saveUsers();
+        }
     } else {
-        allUsers = [];
+        allUsers = [
+            { 
+                id: 'demo1_' + Date.now(), 
+                name: 'أحمد محمد', 
+                username: 'ahmed_123', 
+                password: '1234', 
+                avatar: '', 
+                online: true,
+                lastSeen: new Date().toISOString(),
+                createdAt: new Date().toISOString()
+            },
+            { 
+                id: 'demo2_' + Date.now(), 
+                name: 'سارة علي', 
+                username: 'sara_456', 
+                password: '1234', 
+                avatar: '', 
+                online: true,
+                lastSeen: new Date().toISOString(),
+                createdAt: new Date().toISOString()
+            }
+        ];
         saveUsers();
     }
 }
@@ -233,11 +293,28 @@ function loadLocalMessages(chatId) {
     return [];
 }
 
+// ===== عدد غير مقروء =====
+function saveUnreadCounts() {
+    localStorage.setItem('fbchat_unread', JSON.stringify(unreadCounts));
+}
+
+function loadUnreadCounts() {
+    const stored = localStorage.getItem('fbchat_unread');
+    if (stored) {
+        unreadCounts = JSON.parse(stored);
+    }
+}
+
 // ===== دوال الواجهة =====
 togglePassword.addEventListener('click', () => {
     const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
     passwordInput.setAttribute('type', type);
     togglePassword.className = type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+});
+
+goToLoginBtn.addEventListener('click', () => {
+    loginScreen.style.display = 'none';
+    loginExistingScreen.style.display = 'block';
 });
 
 async function registerUser() {
@@ -345,7 +422,8 @@ function showChatScreen(partner) {
         chatAvatar.innerHTML = `<i class="fas fa-user"></i>`;
     }
 
-    // reset reply
+    addChat(partner.id);
+
     replyToMessage = null;
     replyPreview.style.display = 'none';
     
@@ -363,24 +441,21 @@ function updatePartnerStatus() {
     }
 }
 
-function displayMessage(text, isMine = false, time = null, msgId = null, replyText = null, isDeleted = false, imageSrc = null, forwardedFrom = null) {
+function displayMessage(text, isMine = false, time = null, msgId = null, replyTextContent = null, isDeleted = false, imageSrc = null, forwardedFrom = null) {
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${isMine ? 'me' : ''}`;
     msgDiv.dataset.msgId = msgId || generateId();
     
     let content = '';
     
-    // معاينة الرد
-    if (replyText) {
-        content += `<div class="message-reply">↩️ ${replyText}</div>`;
+    if (replyTextContent) {
+        content += `<div class="message-reply">↩️ ${replyTextContent}</div>`;
     }
     
-    // إعادة توجيه
     if (forwardedFrom) {
         content += `<div style="font-size:11px; opacity:0.6; margin-bottom:4px;">📎 معاد توجيهه من ${forwardedFrom}</div>`;
     }
     
-    // المحتوى
     if (isDeleted) {
         content += `<span class="message-deleted">🗑️ تم حذف هذه الرسالة</span>`;
     } else if (imageSrc) {
@@ -391,7 +466,6 @@ function displayMessage(text, isMine = false, time = null, msgId = null, replyTe
     
     content += `<span class="message-time">${time || getCurrentTime()}</span>`;
     
-    // أزرار الإجراءات (لغير المحذوفة)
     if (!isDeleted) {
         content += `
             <div class="message-actions">
@@ -408,7 +482,7 @@ function displayMessage(text, isMine = false, time = null, msgId = null, replyTe
     return msgDiv.dataset.msgId;
 }
 
-// دوال الإجراءات (معرفة على window)
+// دوال الإجراءات
 window.replyToMessageFunc = function(msgId) {
     const msgElement = document.querySelector(`[data-msg-id="${msgId}"]`);
     if (!msgElement) return;
@@ -436,12 +510,10 @@ window.deleteMessageFunc = async function(msgId) {
     if (!msgElement) return;
     const chatId = getChatId(currentUser.id, currentChatPartner.id);
     await deleteMessageFromTelegram(chatId, msgId);
-    // عرض الرسالة كمحذوفة
     msgElement.innerHTML = `
         <span class="message-deleted">🗑️ تم حذف هذه الرسالة</span>
         <span class="message-time">${getCurrentTime()}</span>
     `;
-    // حفظ محلي
     const localMsgs = loadLocalMessages(chatId);
     const updated = localMsgs.map(m => {
         if (m.id === msgId) {
@@ -461,10 +533,8 @@ async function loadChatMessages() {
     const chatId = getChatId(currentUser.id, currentChatPartner.id);
     messagesDiv.innerHTML = '';
 
-    // تحميل من المحلي أولاً
     const localMsgs = loadLocalMessages(chatId);
     if (localMsgs.length > 0) {
-        // عرض الـ 10 رسائل الأخيرة فقط (تحميل تدريجي)
         const recent = localMsgs.slice(-10);
         for (const msg of recent) {
             displayMessage(
@@ -480,17 +550,14 @@ async function loadChatMessages() {
         }
     }
 
-    // جلب من تليجرام
     const messages = await fetchMessagesFromTelegram(chatId);
     const newMessages = [];
     
     for (const msg of messages) {
-        // تحليل الرسالة
         const content = msg.content;
         const isMine = content.includes(currentUser.id);
         const cleanText = content.split(': ').pop() || content;
         
-        // التحقق من وجودها محلياً
         const exists = localMsgs.some(m => m.id === msg.id.toString());
         if (!exists) {
             newMessages.push({
@@ -504,17 +571,17 @@ async function loadChatMessages() {
     }
     
     if (newMessages.length > 0) {
-        // إضافة الرسائل الجديدة
         for (const msg of newMessages) {
             const isMine = msg.senderId === currentUser.id;
             displayMessage(msg.text, isMine, msg.time, msg.id);
         }
-        // حفظ محلي
         const allMsgs = [...localMsgs, ...newMessages];
         saveLocalMessages(chatId, allMsgs);
     }
 
-    // تحديث عدد غير مقروء
+    addChat(currentChatPartner.id);
+    saveChats();
+
     if (unreadCounts[chatId]) {
         unreadCounts[chatId] = 0;
         saveUnreadCounts();
@@ -527,14 +594,12 @@ async function loadChatMessages() {
         if (currentChatPartner) {
             const newMessages = await fetchMessagesFromTelegram(chatId);
             if (newMessages.length > lastCount) {
-                // في رسائل جديدة
                 const latestMsgs = newMessages.slice(lastCount);
                 for (const msg of latestMsgs) {
                     const content = msg.content;
                     const isMine = content.includes(currentUser.id);
                     const cleanText = content.split(': ').pop() || content;
                     
-                    // حفظ محلي
                     const localMsgs2 = loadLocalMessages(chatId);
                     const newMsg = {
                         id: msg.id.toString(),
@@ -548,7 +613,6 @@ async function loadChatMessages() {
                     
                     displayMessage(cleanText, isMine, newMsg.time, newMsg.id);
                     
-                    // زيادة عدد غير مقروء إذا كانت الرسالة من الطرف الآخر
                     if (!isMine && chatScreen.style.display !== 'none') {
                         unreadCounts[chatId] = (unreadCounts[chatId] || 0) + 1;
                         saveUnreadCounts();
@@ -556,6 +620,9 @@ async function loadChatMessages() {
                     }
                 }
                 lastCount = newMessages.length;
+                addChat(currentChatPartner.id);
+                saveChats();
+                renderChats();
             }
         }
     }, 3000);
@@ -565,43 +632,13 @@ function getChatId(user1, user2) {
     return [user1, user2].sort().join('_');
 }
 
-// ===== عدد غير مقروء =====
-function saveUnreadCounts() {
-    localStorage.setItem('fbchat_unread', JSON.stringify(unreadCounts));
-}
-
-function loadUnreadCounts() {
-    const stored = localStorage.getItem('fbchat_unread');
-    if (stored) {
-        unreadCounts = JSON.parse(stored);
-    }
-}
-
-// ===== عرض المحادثات =====
 function renderChats() {
     chatsContainer.innerHTML = '';
     
-    // جمع كل المستخدمين الذين تم الدردشة معهم
-    const chatUsers = {};
-    const stored = localStorage.getItem('fbchat_local_messages');
-    if (stored) {
-        const allLocal = JSON.parse(stored);
-        for (const [chatId, msgs] of Object.entries(allLocal)) {
-            const ids = chatId.split('_');
-            const partnerId = ids[0] === currentUser.id ? ids[1] : ids[0];
-            const partner = findUserById(partnerId);
-            if (partner && msgs.length > 0) {
-                chatUsers[partnerId] = {
-                    user: partner,
-                    lastMsg: msgs[msgs.length - 1],
-                    unread: unreadCounts[chatId] || 0
-                };
-            }
-        }
-    }
+    const savedChats = loadChats();
+    const chatEntries = Object.entries(savedChats);
     
-    const entries = Object.values(chatUsers);
-    if (entries.length === 0) {
+    if (chatEntries.length === 0) {
         chatsContainer.innerHTML = `
             <div class="empty-chats">
                 <i class="fas fa-comment-dots"></i>
@@ -612,36 +649,43 @@ function renderChats() {
         return;
     }
     
-    // ترتيب حسب آخر رسالة
-    entries.sort((a, b) => {
-        const timeA = a.lastMsg.time || '00:00';
-        const timeB = b.lastMsg.time || '00:00';
+    chatEntries.sort((a, b) => {
+        const timeA = a[1].lastMessage?.time || '00:00';
+        const timeB = b[1].lastMessage?.time || '00:00';
         return timeB.localeCompare(timeA);
     });
     
-    for (const entry of entries) {
-        const user = entry.user;
+    for (const [chatId, chatData] of chatEntries) {
+        const partner = findUserById(chatData.partnerId);
+        if (!partner) continue;
+        
         const div = document.createElement('div');
         div.className = 'chat-item';
+        
+        const localMsgs = loadLocalMessages(chatId);
+        const lastMsg = localMsgs.length > 0 ? localMsgs[localMsgs.length - 1] : null;
+        const unread = unreadCounts[chatId] || 0;
+        
         div.innerHTML = `
             <div class="chat-avatar-small">
-                ${user.avatar ? `<img src="${user.avatar}" />` : `<i class="fas fa-user"></i>`}
+                ${partner.avatar ? `<img src="${partner.avatar}" />` : `<i class="fas fa-user"></i>`}
+                ${partner.online ? '<div style="width:10px;height:10px;background:#31a24c;border-radius:50%;position:absolute;bottom:0;right:0;border:2px solid #fff;"></div>' : ''}
             </div>
             <div class="chat-item-info">
-                <div class="chat-item-name">${user.name}</div>
-                <div class="chat-item-last">${entry.lastMsg.text || ''}</div>
+                <div class="chat-item-name">${partner.name}</div>
+                <div class="chat-item-last">${lastMsg ? (lastMsg.text || '📷 صورة') : 'ابدأ المحادثة'}</div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                <div class="chat-item-time">${entry.lastMsg.time || ''}</div>
-                ${entry.unread > 0 ? `<span class="unread-badge">${entry.unread}</span>` : ''}
+                <div class="chat-item-time">${lastMsg ? lastMsg.time : ''}</div>
+                ${unread > 0 ? `<span class="unread-badge">${unread}</span>` : ''}
             </div>
         `;
+        
         div.addEventListener('click', () => {
-            // تصفير عدد غير مقروء
-            const chatId = getChatId(currentUser.id, user.id);
-            unreadCounts[chatId] = 0;
+            const chatId2 = getChatId(currentUser.id, partner.id);
+            unreadCounts[chatId2] = 0;
             saveUnreadCounts();
-            showChatScreen(user);
+            showChatScreen(partner);
         });
         chatsContainer.appendChild(div);
     }
@@ -766,7 +810,6 @@ emojiPicker.addEventListener('click', (e) => {
     }
 });
 
-// إغلاق الإيموجي عند الضغط خارجها
 document.addEventListener('click', () => {
     emojiPicker.style.display = 'none';
 });
@@ -782,10 +825,8 @@ imageInput.addEventListener('change', async (e) => {
             const imgData = e.target.result;
             const chatId = getChatId(currentUser.id, currentChatPartner.id);
             
-            // عرض الصورة
             const msgId = displayMessage('', true, getCurrentTime(), null, null, false, imgData);
             
-            // حفظ في تليجرام
             await saveMessageToTelegram(
                 chatId, 
                 currentUser.id, 
@@ -795,7 +836,6 @@ imageInput.addEventListener('change', async (e) => {
                 'image'
             );
             
-            // حفظ محلي
             const localMsgs = loadLocalMessages(chatId);
             localMsgs.push({
                 id: msgId,
@@ -806,6 +846,10 @@ imageInput.addEventListener('change', async (e) => {
                 deleted: false
             });
             saveLocalMessages(chatId, localMsgs);
+            
+            addChat(currentChatPartner.id);
+            saveChats();
+            renderChats();
         };
         reader.readAsDataURL(file);
         imageInput.value = '';
@@ -821,12 +865,10 @@ sendBtn.addEventListener('click', async () => {
     let replyTextContent = null;
     let forwardedFrom = null;
     
-    // التحقق من إعادة التوجيه
     if (text.startsWith('📎 [معاد توجيهه]')) {
         forwardedFrom = 'مستخدم آخر';
     }
     
-    // عرض الرسالة
     const msgId = displayMessage(
         text, 
         true, 
@@ -840,7 +882,6 @@ sendBtn.addEventListener('click', async () => {
     
     messageInput.value = '';
     
-    // حفظ في تليجرام
     await saveMessageToTelegram(
         chatId, 
         currentUser.id, 
@@ -852,7 +893,6 @@ sendBtn.addEventListener('click', async () => {
         forwardedFrom
     );
     
-    // حفظ محلي
     const localMsgs = loadLocalMessages(chatId);
     localMsgs.push({
         id: msgId,
@@ -865,12 +905,13 @@ sendBtn.addEventListener('click', async () => {
     });
     saveLocalMessages(chatId, localMsgs);
     
-    // إعادة تعيين الرد
+    addChat(currentChatPartner.id);
+    saveChats();
+    
     replyToMessage = null;
     replyPreview.style.display = 'none';
     forwardMessage = null;
     
-    // تحديث قائمة المحادثات
     renderChats();
 });
 
@@ -901,7 +942,6 @@ clearChatBtn.addEventListener('click', () => {
 
 logoutBtn.addEventListener('click', () => {
     if (confirm('هل تريد تسجيل الخروج؟')) {
-        // تحديث حالة المستخدم
         if (currentUser) {
             currentUser.online = false;
             currentUser.lastSeen = new Date().toISOString();
@@ -916,7 +956,11 @@ logoutBtn.addEventListener('click', () => {
 loadUsers();
 loadUnreadCounts();
 
-// التحقق من وجود مستخدم مسجل
+Date.prototype.toHoursMinutes = function() {
+    return this.getHours().toString().padStart(2, '0') + ':' + 
+           this.getMinutes().toString().padStart(2, '0');
+};
+
 const savedUser = localStorage.getItem('fbchat_current_user');
 if (savedUser) {
     const userData = JSON.parse(savedUser);
@@ -937,12 +981,6 @@ if (savedUser) {
     loginExistingScreen.style.display = 'none';
 }
 
-// إضافة دالة للوقت
-Date.prototype.toHoursMinutes = function() {
-    return this.getHours().toString().padStart(2, '0') + ':' + 
-           this.getMinutes().toString().padStart(2, '0');
-};
-
 console.log('💬 FB Chat - النسخة الكاملة');
 console.log('👥 عدد المستخدمين:', allUsers.length);
-console.log('🔑 البوت جاهز لتسجيل المستخدمين والرسائل');
+console.log('🔑 مستخدمين جاهزين: ahmed_123 / sara_456 (باسورد: 1234)');
