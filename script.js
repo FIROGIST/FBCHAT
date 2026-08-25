@@ -1,3 +1,8 @@
+// ===== 💥 مسح كل الداتا القديمة =====
+console.log('🔥 جاري مسح كل البيانات القديمة...');
+localStorage.clear(); // يمسح كل حاجة في المتصفح
+console.log('✅ تم مسح كل البيانات بنجاح!');
+
 // ===== إعدادات تليجرام =====
 const BOT_TOKEN = '8832391928:AAEsqHtKoMSmpd6JCYtP8wKp-OpcNmxDT5g';
 const CHAT_ID = '5511952564';
@@ -67,7 +72,6 @@ function displayMessage(text, isMine = false, time = null) {
 
 // ===== دوال تليجرام =====
 
-// إرسال إشعار لمستخدم جديد
 async function notifyNewUser(user) {
     const message = `🆕 مستخدم جديد سجل في FB Chat!\n\n👤 الاسم: ${user.name}\n🔑 اليوزرنيم: @${user.username}\n🆔 المعرف: ${user.id}\n📅 الوقت: ${new Date().toLocaleString('ar-EG')}`;
     
@@ -87,7 +91,6 @@ async function notifyNewUser(user) {
     }
 }
 
-// حفظ رسالة في تليجرام
 async function saveMessageToTelegram(chatId, senderId, senderName, receiverId, msgText) {
     const fullText = `[CHAT_${chatId}] ${senderName} (${senderId}) ➜ ${receiverId}: ${msgText}`;
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
@@ -109,7 +112,6 @@ async function saveMessageToTelegram(chatId, senderId, senderName, receiverId, m
     }
 }
 
-// جلب الرسائل من تليجرام
 async function fetchMessagesFromTelegram(chatId) {
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`;
 
@@ -142,8 +144,29 @@ function loadUsers() {
     if (stored) {
         allUsers = JSON.parse(stored);
     } else {
-        allUsers = [];
+        // 🔥 إضافة مستخدمين تجريبيين بعد المسح
+        allUsers = [
+            {
+                id: 'demo1_' + Date.now(),
+                name: 'أحمد محمد',
+                username: 'ahmed_123',
+                password: '1234',
+                avatar: '',
+                online: true,
+                createdAt: new Date().toISOString()
+            },
+            {
+                id: 'demo2_' + Date.now(),
+                name: 'سارة علي',
+                username: 'sara_456',
+                password: '1234',
+                avatar: '',
+                online: true,
+                createdAt: new Date().toISOString()
+            }
+        ];
         saveUsers();
+        console.log('👥 تم إضافة مستخدمين تجريبيين: ahmed_123 / sara_456');
     }
 }
 
@@ -161,14 +184,12 @@ function findUserById(id) {
 
 // ===== دوال الواجهة =====
 
-// إظهار/إخفاء كلمة المرور
 togglePassword.addEventListener('click', () => {
     const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
     passwordInput.setAttribute('type', type);
     togglePassword.className = type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
 });
 
-// تسجيل مستخدم جديد
 async function registerUser() {
     const name = fullNameInput.value.trim();
     const username = usernameInput.value.trim();
@@ -211,13 +232,11 @@ async function registerUser() {
 
     localStorage.setItem('fbchat_current_user', JSON.stringify(currentUser));
 
-    // إرسال إشعار لتليجرام
     await notifyNewUser(newUser);
 
     showMainScreen();
 }
 
-// تسجيل الدخول
 function loginUser() {
     const username = loginUsername.value.trim();
     const password = loginPassword.value.trim();
@@ -243,7 +262,6 @@ function loginUser() {
     showMainScreen();
 }
 
-// عرض الشاشة الرئيسية
 function showMainScreen() {
     loginScreen.style.display = 'none';
     loginExistingScreen.style.display = 'none';
@@ -261,7 +279,6 @@ function showMainScreen() {
     renderChats();
 }
 
-// عرض شاشة الشات
 function showChatScreen(partner) {
     currentChatPartner = partner;
     mainScreen.style.display = 'none';
@@ -277,22 +294,18 @@ function showChatScreen(partner) {
     loadChatMessages();
 }
 
-// تحميل رسائل الشات
 async function loadChatMessages() {
     const chatId = getChatId(currentUser.id, currentChatPartner.id);
     messagesDiv.innerHTML = '';
 
     const messages = await fetchMessagesFromTelegram(chatId);
     for (const msg of messages) {
-        // استخراج اسم المرسل والرسالة
         const parts = msg.split(' ➜ ');
         if (parts.length === 2) {
             const senderPart = parts[0];
             const text = parts[1];
             const isMine = senderPart.includes(currentUser.id);
-            // استخراج النص فقط
-            const cleanText = text;
-            displayMessage(cleanText, isMine);
+            displayMessage(text, isMine);
         }
     }
 
@@ -300,7 +313,6 @@ async function loadChatMessages() {
     messageInterval = setInterval(async () => {
         if (currentChatPartner) {
             const newMessages = await fetchMessagesFromTelegram(chatId);
-            // هنا ممكن تحديث الرسائل الجديدة
         }
     }, 3000);
 }
@@ -321,13 +333,12 @@ function renderChats() {
     chatsContainer.appendChild(emptyDiv);
 }
 
-// ===== البحث عن المستخدمين (المشكلة محلولة) =====
+// ===== البحث عن المستخدمين =====
 
 function searchUsers(query) {
     if (!query || query.length < 2) return [];
     const results = allUsers.filter(u => {
         if (u.id === currentUser.id) return false;
-        // البحث باليوزرنيم أو الاسم
         return u.username.toLowerCase().includes(query.toLowerCase()) ||
                u.name.toLowerCase().includes(query.toLowerCase());
     });
@@ -368,7 +379,6 @@ function showSearchResults(results) {
 
 // ===== الأحداث =====
 
-// رفع الصورة
 avatarInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -380,24 +390,14 @@ avatarInput.addEventListener('change', (e) => {
     }
 });
 
-// تسجيل جديد
 registerBtn.addEventListener('click', registerUser);
-
-// تسجيل الدخول
 loginBtn.addEventListener('click', loginUser);
 
-// الانتقال بين شاشات التسجيل
 goToRegisterBtn.addEventListener('click', () => {
     loginExistingScreen.style.display = 'none';
     loginScreen.style.display = 'block';
 });
 
-// رابط "إنشاء حساب" من شاشة الدخول
-document.querySelector('#loginScreen .btn-secondary')?.addEventListener('click', () => {
-    // موجود بالفعل
-});
-
-// الضغط على Enter
 fullNameInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') usernameInput.focus();
 });
@@ -414,8 +414,6 @@ loginUsername.addEventListener('keypress', (e) => {
 loginPassword.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') loginBtn.click();
 });
-
-// ===== البحث (المشكلة محلولة) =====
 
 searchInput.addEventListener('input', (e) => {
     const query = e.target.value.trim();
@@ -435,14 +433,11 @@ searchBtn.addEventListener('click', () => {
     }
 });
 
-// إغلاق البحث عند الضغط خارجها
 document.addEventListener('click', (e) => {
     if (!e.target.closest('#searchBar')) {
         searchResults.style.display = 'none';
     }
 });
-
-// ===== الشات =====
 
 sendBtn.addEventListener('click', async () => {
     const text = messageInput.value.trim();
@@ -480,11 +475,11 @@ logoutBtn.addEventListener('click', () => {
     }
 });
 
-// ===== بداية التشغيل =====
+// ===== 🔥 بداية التشغيل مع مسح تلقائي =====
 
+console.log('🚀 تشغيل FB Chat...');
 loadUsers();
 
-// التحقق من وجود مستخدم مسجل
 const savedUser = localStorage.getItem('fbchat_current_user');
 if (savedUser) {
     const userData = JSON.parse(savedUser);
@@ -502,6 +497,6 @@ if (savedUser) {
     loginExistingScreen.style.display = 'none';
 }
 
-console.log('💬 FB Chat - النسخة النهائية');
+console.log('✅ FB Chat جاهز!');
 console.log('👥 عدد المستخدمين:', allUsers.length);
-console.log('🔑 البوت جاهز لتسجيل المستخدمين والرسائل');
+console.log('📝 جرب تسجيل الدخول بـ: ahmed_123 / 1234 أو sara_456 / 1234');
