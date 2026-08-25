@@ -85,7 +85,7 @@ function getLastSeen(user) {
     return `منذ ${Math.floor(diff / 86400)} يوم`;
 }
 
-// ===== حفظ المحادثات =====
+// ===== حفظ المحادثات محلياً =====
 function saveChats() {
     const chats = {};
     for (const [key, value] of Object.entries(localMessages)) {
@@ -124,7 +124,88 @@ function addChat(partnerId) {
     }
 }
 
-// ===== دوال تليجرام =====
+// ===== ✅ دوال تليجرام لتخزين المستخدمين =====
+
+// حفظ مستخدم جديد في تليجرام
+async function saveUserToTelegram(user) {
+    const message = `🆕 مستخدم جديد!\n\n👤 الاسم: ${user.name}\n🔑 اليوزرنيم: @${user.username}\n🆔 المعرف: ${user.id}\n🌍 الدولة: ${user.country || 'غير معروف'}\n📅 الوقت: ${new Date().toLocaleString('ar-EG')}`;
+    
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+    try {
+        await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: CHAT_ID,
+                text: message,
+                parse_mode: 'HTML'
+            })
+        });
+        console.log('✅ تم حفظ المستخدم في تليجرام');
+    } catch (error) {
+        console.error('خطأ في حفظ المستخدم:', error);
+    }
+}
+
+// جلب كل المستخدمين من تليجرام
+async function fetchAllUsersFromTelegram() {
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`;
+    
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        if (!data.ok) {
+            console.log('❌ خطأ في جلب المستخدمين');
+            return [];
+        }
+        
+        const users = [];
+        const uniqueIds = new Set();
+        
+        for (const update of data.result) {
+            if (update.message && update.message.text) {
+                const text = update.message.text;
+                // البحث عن رسائل تسجيل المستخدمين الجدد
+                if (text.includes('🆕 مستخدم جديد!')) {
+                    const lines = text.split('\n');
+                    let name = '', username = '', id = '';
+                    for (const line of lines) {
+                        if (line.includes('👤 الاسم:')) {
+                            name = line.replace('👤 الاسم:', '').trim();
+                        }
+                        if (line.includes('🔑 اليوزرنيم:')) {
+                            username = line.replace('🔑 اليوزرنيم:', '').trim().replace('@', '');
+                        }
+                        if (line.includes('🆔 المعرف:')) {
+                            id = line.replace('🆔 المعرف:', '').trim();
+                        }
+                    }
+                    if (name && username && id && !uniqueIds.has(id)) {
+                        uniqueIds.add(id);
+                        // البحث عن المستخدم في localStorage عشان نجيب الصورة
+                        const localUser = allUsers.find(u => u.id === id);
+                        users.push({
+                            id: id,
+                            name: name,
+                            username: username,
+                            avatar: localUser?.avatar || '',
+                            online: false,
+                            lastSeen: new Date().toISOString()
+                        });
+                    }
+                }
+            }
+        }
+        
+        console.log(`📋 تم جلب ${users.length} مستخدم من تليجرام`);
+        return users;
+    } catch (error) {
+        console.error('خطأ في جلب المستخدمين:', error);
+        return [];
+    }
+}
+
+// ===== دوال تليجرام الأساسية =====
 async function notifyNewUser(user) {
     const message = `🆕 مستخدم جديد سجل في FB Chat!\n\n👤 الاسم: ${user.name}\n🔑 اليوزرنيم: @${user.username}\n🆔 المعرف: ${user.id}\n📅 الوقت: ${new Date().toLocaleString('ar-EG')}`;
     
@@ -240,6 +321,7 @@ function loadUsers() {
             saveUsers();
         }
     } else {
+        // مستخدمين تجريبيين للبداية
         allUsers = [
             { 
                 id: 'demo1_' + Date.now(), 
@@ -278,7 +360,7 @@ function findUserById(id) {
     return allUsers.find(u => u.id === id);
 }
 
-// ===== حفظ محلي =====
+// ===== حفظ محلي للرسائل =====
 function saveLocalMessages(chatId, messages) {
     localMessages[chatId] = messages;
     localStorage.setItem('fbchat_local_messages', JSON.stringify(localMessages));
@@ -332,7 +414,10 @@ async function registerUser() {
         return;
     }
 
-    if (findUserByUsername(username)) {
+    // ✅ التحقق من تليجرام (السيرفر المركزي)
+    const allUsersFromTelegram = await fetchAllUsersFromTelegram();
+    const existingUser = allUsersFromTelegram.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (existingUser) {
         alert('⚠️ هذا اليوزرنيم مستخدم بالفعل!');
         return;
     }
@@ -351,15 +436,20 @@ async function registerUser() {
         avatar: avatar,
         online: true,
         lastSeen: new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        country: 'مصر' // يمكن إضافة API لتحديد الدولة
     };
 
+    // حفظ محلياً
     allUsers.push(newUser);
     saveUsers();
     currentUser = newUser;
-
     localStorage.setItem('fbchat_current_user', JSON.stringify(currentUser));
+
+    // ✅ حفظ في تليجرام (السيرفر المركزي)
+    await saveUserToTelegram(newUser);
     await notifyNewUser(newUser);
+
     showMainScreen();
 }
 
@@ -691,14 +781,35 @@ function renderChats() {
     }
 }
 
-// ===== البحث عن المستخدمين =====
-function searchUsers(query) {
+// ===== ✅ البحث عن المستخدمين (جلب من تليجرام) =====
+async function searchUsersGlobal(query) {
     if (!query || query.length < 2) return [];
-    const results = allUsers.filter(u => {
+    
+    // جلب كل المستخدمين من تليجرام
+    const telegramUsers = await fetchAllUsersFromTelegram();
+    
+    // دمج مع المستخدمين المحليين
+    const allUsersList = [...allUsers, ...telegramUsers];
+    
+    // إزالة التكرار
+    const uniqueUsers = [];
+    const seenIds = new Set();
+    for (const user of allUsersList) {
+        if (!seenIds.has(user.id)) {
+            seenIds.add(user.id);
+            uniqueUsers.push(user);
+        }
+    }
+    
+    const searchQuery = query.toLowerCase().trim();
+    const results = uniqueUsers.filter(u => {
         if (u.id === currentUser.id) return false;
-        return u.username.toLowerCase().includes(query.toLowerCase()) ||
-               u.name.toLowerCase().includes(query.toLowerCase());
+        const username = (u.username || '').toLowerCase();
+        const name = (u.name || '').toLowerCase();
+        return username.includes(searchQuery) || name.includes(searchQuery);
     });
+    
+    console.log(`🔍 تم العثور على ${results.length} نتيجة للبحث عن "${query}"`);
     return results;
 }
 
@@ -707,6 +818,12 @@ function showSearchResults(results) {
     searchResults.style.display = 'none';
     
     if (!results || results.length === 0) {
+        searchResults.style.display = 'block';
+        searchResults.innerHTML = `
+            <div style="padding:12px 16px; color:#65676b; text-align:center;">
+                <i class="fas fa-search"></i> لا توجد نتائج لبحثك
+            </div>
+        `;
         return;
     }
 
@@ -729,7 +846,24 @@ function showSearchResults(results) {
         div.addEventListener('click', () => {
             searchResults.style.display = 'none';
             searchInput.value = '';
-            showChatScreen(user);
+            
+            // التأكد من وجود المستخدم في القائمة المحلية
+            let existingUser = findUserById(user.id);
+            if (!existingUser) {
+                // إضافة المستخدم من تليجرام إلى القائمة المحلية
+                existingUser = {
+                    id: user.id,
+                    name: user.name,
+                    username: user.username,
+                    avatar: user.avatar || '',
+                    online: false,
+                    lastSeen: new Date().toISOString()
+                };
+                allUsers.push(existingUser);
+                saveUsers();
+            }
+            
+            showChatScreen(existingUser);
         });
         searchResults.appendChild(div);
     }
@@ -772,21 +906,33 @@ loginPassword.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') loginBtn.click();
 });
 
-searchInput.addEventListener('input', (e) => {
+// ===== ✅ البحث (جلب من تليجرام) =====
+searchInput.addEventListener('input', async (e) => {
     const query = e.target.value.trim();
     if (query.length >= 2) {
-        const results = searchUsers(query);
+        const results = await searchUsersGlobal(query);
         showSearchResults(results);
     } else {
         searchResults.style.display = 'none';
     }
 });
 
-searchBtn.addEventListener('click', () => {
+searchBtn.addEventListener('click', async () => {
     const query = searchInput.value.trim();
     if (query.length >= 2) {
-        const results = searchUsers(query);
+        const results = await searchUsersGlobal(query);
         showSearchResults(results);
+    }
+});
+
+// البحث بالضغط على Enter
+searchInput.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+        const query = searchInput.value.trim();
+        if (query.length >= 2) {
+            const results = await searchUsersGlobal(query);
+            showSearchResults(results);
+        }
     }
 });
 
@@ -981,6 +1127,7 @@ if (savedUser) {
     loginExistingScreen.style.display = 'none';
 }
 
-console.log('💬 FB Chat - النسخة الكاملة');
-console.log('👥 عدد المستخدمين:', allUsers.length);
+console.log('💬 FB Chat - النسخة النهائية (مع تخزين المستخدمين في تليجرام)');
+console.log('👥 عدد المستخدمين المحليين:', allUsers.length);
 console.log('🔑 مستخدمين جاهزين: ahmed_123 / sara_456 (باسورد: 1234)');
+console.log('🌍 أي مستخدم يسجل هيظهر في البحث عند الجميع!');
