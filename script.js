@@ -1,7 +1,9 @@
-// ===== 💣 تفجير كل البيانات القديمة =====
-console.log('🔥 جاري مسح كل البيانات القديمة...');
-localStorage.clear();
-console.log('✅ تم مسح كل البيانات!');
+// ===== 💣 تفجير كل البيانات القديمة (مرة واحدة فقط) =====
+// ✅ لو عايز تمسح البيانات، افتح Console واستخدم localStorage.clear()
+// localStorage.clear(); // ❌ مش هنا عشان ميمسحش كل شوية
+
+console.log('🔥 تم تحميل FB Chat...');
+console.log('📋 البيانات موجودة في localStorage');
 
 // ===== إعدادات تليجرام =====
 const BOT_TOKEN = '8832391928:AAEsqHtKoMSmpd6JCYtP8wKp-OpcNmxDT5g';
@@ -594,7 +596,6 @@ function showSearchResults(results) {
         const div = document.createElement('div');
         div.className = 'search-result-item';
         
-        // تحديد مصدر المستخدم
         const isLocal = allUsers.some(u => u.id === user.id && u.password);
         const sourceText = isLocal ? '✅ مسجل محلياً' : '🌐 من تليجرام';
         const sourceColor = isLocal ? '#31a24c' : '#0084ff';
