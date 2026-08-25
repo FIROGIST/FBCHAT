@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FB Chat - تواصل مع الأصدقاء</title>
+    <title>FB Chat</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 </head>
@@ -18,7 +18,6 @@
             <p class="subtitle">تواصل مع أصدقائك بكل سهولة</p>
             
             <div class="login-box">
-                <!-- صورة الملف الشخصي -->
                 <div class="avatar-upload">
                     <div class="avatar-preview" id="avatarPreview">
                         <i class="fas fa-user"></i>
@@ -30,22 +29,19 @@
                     <input type="file" id="avatarInput" accept="image/*" style="display:none;" />
                 </div>
 
-                <!-- اسم المستخدم -->
                 <div class="input-group">
                     <i class="fas fa-user"></i>
                     <input type="text" id="fullName" placeholder="الاسم الكامل" />
                 </div>
 
-                <!-- اليوزرنيم -->
                 <div class="input-group">
                     <i class="fas fa-at"></i>
-                    <input type="text" id="username" placeholder="اليوزرنيم (مثال: ahmed_123)" />
+                    <input type="text" id="username" placeholder="اليوزرنيم" />
                 </div>
 
-                <!-- كلمة المرور -->
                 <div class="input-group">
                     <i class="fas fa-lock"></i>
-                    <input type="password" id="password" placeholder="كلمة المرور (4 أحرف على الأقل)" />
+                    <input type="password" id="password" placeholder="كلمة المرور (4 أحرف)" />
                     <i class="fas fa-eye" id="togglePassword" style="cursor:pointer; color:#65676b;"></i>
                 </div>
 
@@ -53,13 +49,9 @@
                     <i class="fas fa-arrow-right"></i> بدء المحادثة
                 </button>
 
-                <div class="divider">
-                    <span>أو</span>
-                </div>
-
+                <div class="divider"><span>أو</span></div>
                 <p style="color:#65676b; font-size:14px;">
-                    <i class="fas fa-info-circle"></i>
-                    ابحث عن أصدقائك باستخدام اليوزرنيم
+                    <i class="fas fa-info-circle"></i> ابحث عن أصدقائك باستخدام اليوزرنيم
                 </p>
             </div>
         </div>
@@ -89,10 +81,7 @@
                     <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
                 </button>
 
-                <div class="divider">
-                    <span>أو</span>
-                </div>
-
+                <div class="divider"><span>أو</span></div>
                 <button id="goToRegisterBtn" class="btn-secondary">
                     <i class="fas fa-user-plus"></i> إنشاء حساب جديد
                 </button>
@@ -100,9 +89,8 @@
         </div>
     </div>
 
-    <!-- ===== شاشة البحث والمحادثات ===== -->
+    <!-- ===== شاشة الرئيسية ===== -->
     <div id="mainScreen" style="display:none;">
-        <!-- الهيدر -->
         <div id="mainHeader">
             <div class="user-info">
                 <div class="avatar-small" id="userAvatarSmall">
@@ -113,22 +101,22 @@
                     <div class="user-username-display" id="displayUsername">@username</div>
                 </div>
             </div>
-            <button id="logoutBtn" class="icon-btn">
-                <i class="fas fa-sign-out-alt"></i>
-            </button>
+            <div style="display:flex; gap:8px;">
+                <button id="logoutBtn" class="icon-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
         </div>
 
-        <!-- شريط البحث -->
         <div id="searchBar">
             <div class="search-input-group">
                 <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="ابحث عن مستخدم باليوزرنيم..." />
+                <input type="text" id="searchInput" placeholder="ابحث عن مستخدم..." />
                 <button id="searchBtn"><i class="fas fa-arrow-right"></i></button>
             </div>
             <div id="searchResults" style="display:none;"></div>
         </div>
 
-        <!-- المحادثات المفتوحة -->
         <div id="chatsList">
             <div class="chats-header">
                 <span>المحادثات</span>
@@ -157,13 +145,13 @@
                     </div>
                     <div>
                         <div class="chat-name" id="chatPartnerName">المستخدم</div>
-                        <div class="chat-status">🟢 متصل الآن</div>
+                        <div class="chat-status" id="chatPartnerStatus">🟢 متصل الآن</div>
                     </div>
                 </div>
             </div>
             <div class="header-right">
-                <button class="icon-btn">
-                    <i class="fas fa-phone"></i>
+                <button id="clearChatBtn" class="icon-btn">
+                    <i class="fas fa-trash"></i>
                 </button>
             </div>
         </div>
@@ -172,14 +160,53 @@
             <div id="messages"></div>
         </div>
 
+        <!-- معاينة الرد -->
+        <div id="replyPreview" style="display:none; padding:8px 16px; background:#e7f3ff; border-radius:8px; margin:0 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <small style="color:#0084ff;">الرد على:</small>
+                    <div id="replyText" style="font-size:14px; color:#050505;"></div>
+                </div>
+                <button id="cancelReplyBtn" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size:18px;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
         <div id="inputArea">
             <button class="icon-btn" id="emojiBtn">
                 <i class="far fa-smile"></i>
             </button>
+            <button class="icon-btn" id="imageBtn">
+                <i class="fas fa-image"></i>
+            </button>
+            <input type="file" id="imageInput" accept="image/*" style="display:none;" />
             <input type="text" id="messageInput" placeholder="اكتب رسالة..." />
             <button id="sendBtn" class="send-btn">
                 <i class="fas fa-paper-plane"></i>
             </button>
+        </div>
+
+        <!-- إيموجي منبثق -->
+        <div id="emojiPicker" style="display:none; position:absolute; bottom:80px; left:10px; background:white; border-radius:16px; padding:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); z-index:1000; max-width:300px; flex-wrap:wrap;">
+            <div style="display:flex; flex-wrap:wrap; gap:4px; max-width:280px;">
+                <span style="cursor:pointer; font-size:28px; padding:4px;">😊</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">😂</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">❤️</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">🔥</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">👍</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">👎</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">😍</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">🤣</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">😘</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">🥰</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">😁</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">😎</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">🤔</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">😢</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">😭</span>
+                <span style="cursor:pointer; font-size:28px; padding:4px;">😡</span>
+            </div>
         </div>
     </div>
 
