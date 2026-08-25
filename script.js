@@ -292,7 +292,7 @@ if (avatarInput) {
     });
 }
 
-// ===== عرض الشاشة الرئيسية =====
+// ===== عرض الشاشة الرئيسية (معدلة) =====
 function showMainScreen() {
     loginScreen.style.display = 'none';
     loginExistingScreen.style.display = 'none';
@@ -304,6 +304,15 @@ function showMainScreen() {
     displayName.textContent = currentUser.name;
     displayUsername.textContent = '@' + currentUser.username;
     renderChats();
+    
+    // ✅ التحقق من وجود دعوة معلقة
+    const pendingInvite = localStorage.getItem('fbchat_pending_invite');
+    if (pendingInvite) {
+        localStorage.removeItem('fbchat_pending_invite');
+        setTimeout(() => {
+            openChatWithInviter(pendingInvite);
+        }, 1000);
+    }
 }
 
 // ===== عرض شاشة الشات =====
@@ -781,8 +790,11 @@ document.querySelectorAll('#darkModeToggle, #darkModeToggle2, #darkModeToggle3, 
 // توليد رابط الدعوة
 function getInviteLink() {
     if (!currentUser) return '';
-    const baseUrl = window.location.origin + window.location.pathname;
-    return `${baseUrl}?invite=${currentUser.username}`;
+    
+    // ✅ رابط GitHub Pages بتاعك
+    const BASE_URL = 'https://firogist.github.io/FBCHAT';
+    
+    return `${BASE_URL}?invite=${currentUser.username}`;
 }
 
 // فتح نافذة الدعوة
@@ -878,12 +890,13 @@ function handleInviteLink() {
     if (invitedUsername) {
         console.log(`🔗 تم الدخول عبر دعوة من @${invitedUsername}`);
         localStorage.setItem('fbchat_invited_by', invitedUsername);
+        localStorage.setItem('fbchat_pending_invite', invitedUsername);
         
-        setTimeout(() => {
-            if (currentUser) {
+        if (currentUser) {
+            setTimeout(() => {
                 openChatWithInviter(invitedUsername);
-            }
-        }, 1500);
+            }, 1000);
+        }
     }
 }
 
