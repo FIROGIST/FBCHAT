@@ -526,13 +526,11 @@ async function searchUsersGlobal(query) {
                     }
                     
                     if (name && username && id && !seenIds.has(id)) {
-                        // البحث بالاسم أو اليوزرنيم
                         const nameMatch = name.toLowerCase().includes(searchQuery);
                         const usernameMatch = username.toLowerCase().includes(searchQuery);
                         
                         if (nameMatch || usernameMatch) {
                             seenIds.add(id);
-                            // البحث عن الصورة من localStorage لو موجود
                             const localUser = allUsers.find(u => u.id === id);
                             users.push({
                                 id: id,
@@ -577,7 +575,6 @@ function showSearchResults(results) {
         const div = document.createElement('div');
         div.className = 'search-result-item';
         
-        // تحديد مصدر المستخدم
         const isLocal = allUsers.some(u => u.id === user.id && u.password);
         const sourceText = isLocal ? '✅ مسجل محلياً' : '🌐 من تليجرام';
         const sourceColor = isLocal ? '#31a24c' : '#0084ff';
@@ -779,6 +776,152 @@ document.querySelectorAll('#darkModeToggle, #darkModeToggle2, #darkModeToggle3, 
     if (btn) btn.addEventListener('click', toggleDarkMode);
 });
 
+// ===== 🔗 دعوة الأصدقاء عبر رابط =====
+
+// توليد رابط الدعوة
+function getInviteLink() {
+    if (!currentUser) return '';
+    const baseUrl = window.location.origin + window.location.pathname;
+    return `${baseUrl}?invite=${currentUser.username}`;
+}
+
+// فتح نافذة الدعوة
+function openInviteModal() {
+    const modal = document.getElementById('inviteModal');
+    if (!modal) return;
+    
+    const linkInput = document.getElementById('inviteLinkInput');
+    if (linkInput) {
+        linkInput.value = getInviteLink();
+    }
+    
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+}
+
+// إغلاق نافذة الدعوة
+function closeInviteModal() {
+    const modal = document.getElementById('inviteModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+}
+
+// نسخ الرابط
+document.getElementById('copyInviteBtn')?.addEventListener('click', () => {
+    const linkInput = document.getElementById('inviteLinkInput');
+    if (!linkInput) return;
+    
+    navigator.clipboard.writeText(linkInput.value).then(() => {
+        const btn = document.getElementById('copyInviteBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '✅ تم النسخ';
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+        }, 2000);
+    }).catch(() => {
+        linkInput.select();
+        document.execCommand('copy');
+        alert('✅ تم نسخ الرابط!');
+    });
+});
+
+// مشاركة عبر وسائل التواصل
+window.shareInvite = function(platform) {
+    const link = getInviteLink();
+    const text = `تعال دردش معي على FB Chat! 🗣️\n\n${link}`;
+    let url = '';
+    
+    switch(platform) {
+        case 'whatsapp':
+            url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+            break;
+        case 'facebook':
+            url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}&quote=${encodeURIComponent('تعال دردش معي على FB Chat!')}`;
+            break;
+        case 'twitter':
+            url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+            break;
+        case 'telegram':
+            url = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('تعال دردش معي على FB Chat!')}`;
+            break;
+        default:
+            alert('⚠️ منصة غير مدعومة');
+            return;
+    }
+    
+    window.open(url, '_blank', 'width=600,height=500');
+};
+
+// زر الدعوة في الهيدر
+document.getElementById('inviteBtn')?.addEventListener('click', openInviteModal);
+
+// إغلاق النافذة عند الضغط خارجها
+document.getElementById('inviteModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+        closeInviteModal();
+    }
+});
+
+// إغلاق النافذة بالضغط على ESC
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeInviteModal();
+    }
+});
+
+// ===== التعامل مع رابط الدعوة عند فتح الموقع =====
+function handleInviteLink() {
+    const params = new URLSearchParams(window.location.search);
+    const invitedUsername = params.get('invite');
+    
+    if (invitedUsername) {
+        console.log(`🔗 تم الدخول عبر دعوة من @${invitedUsername}`);
+        localStorage.setItem('fbchat_invited_by', invitedUsername);
+        
+        setTimeout(() => {
+            if (currentUser) {
+                openChatWithInviter(invitedUsername);
+            }
+        }, 1500);
+    }
+}
+
+// فتح الشات مع الشخص اللي دعاك
+async function openChatWithInviter(username) {
+    let user = findUser(username);
+    
+    if (!user) {
+        const teleUsers = await getTelegramUsers();
+        const found = teleUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
+        if (found) {
+            user = {
+                id: found.id,
+                name: found.name,
+                username: found.username,
+                avatar: found.avatar || '',
+                online: false,
+                lastSeen: new Date().toISOString()
+            };
+            allUsers.push(user);
+            saveUsers();
+        }
+    }
+    
+    if (user) {
+        const url = new URL(window.location);
+        url.searchParams.delete('invite');
+        window.history.replaceState({}, '', url);
+        
+        setTimeout(() => {
+            showChatScreen(user);
+            alert(`💬 بدأت الدردشة مع ${user.name}!`);
+        }, 500);
+    } else {
+        console.log('❌ لم يتم العثور على المستخدم الداعي');
+    }
+}
+
 // ===== بداية التشغيل =====
 loadUsers();
 loadUnread();
@@ -818,7 +961,11 @@ if (savedUser) {
     showLoginScreen();
 }
 
+// ===== معالجة رابط الدعوة =====
+handleInviteLink();
+
 console.log('💬 FB Chat جاهز!');
 console.log('🔍 البحث يجيب من تليجرام فقط');
 console.log('🌙 الوضع الداكن متاح في كل الصفحات');
+console.log('🔗 مشاركة الرابط متاحة عبر زر الدعوة');
 console.log('📝 اختر "إنشاء حساب جديد" أو "تسجيل الدخول"');
