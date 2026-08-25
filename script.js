@@ -180,7 +180,7 @@ function addChat(pid) {
 
 function getChatId(u1, u2) { return [u1, u2].sort().join('_'); }
 
-// ===== ✅ التنقل بين الشاشات (إصلاح الأزرار) =====
+// ===== التنقل بين الشاشات =====
 function showLoginScreen() {
     loginScreen.style.display = 'block';
     loginExistingScreen.style.display = 'none';
@@ -205,7 +205,7 @@ function showRegisterScreen() {
     chatScreen.style.display = 'none';
 }
 
-// ===== ✅ أحداث الأزرار الرئيسية (إصلاح) =====
+// ===== أحداث الأزرار الرئيسية =====
 if (goToLoginBtn) goToLoginBtn.addEventListener('click', showLoginExistingScreen);
 if (goToRegisterBtn) goToRegisterBtn.addEventListener('click', showRegisterScreen);
 if (backToMainLoginBtn) backToMainLoginBtn.addEventListener('click', showLoginScreen);
@@ -524,7 +524,7 @@ function showSearchResults(results) {
     searchResults.style.display = 'none';
     if (!results || !results.length) {
         searchResults.style.display = 'block';
-        searchResults.innerHTML = `<div style="padding:12px;color:#65676b;text-align:center;"><i class="fas fa-search"></i> لا توجد نتائج</div>`;
+        searchResults.innerHTML = `<div style="padding:12px;color:var(--text-secondary);text-align:center;"><i class="fas fa-search"></i> لا توجد نتائج</div>`;
         return;
     }
     searchResults.style.display = 'block';
@@ -679,6 +679,43 @@ logoutBtn.addEventListener('click', () => {
     }
 });
 
+// ===== 🌙 الوضع الداكن =====
+function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem('fbchat_darkmode', isDark ? 'true' : 'false');
+    
+    // تحديث كل أزرار الوضع الداكن
+    const darkTexts = document.querySelectorAll('#darkModeText, #darkModeText2, #darkModeText3');
+    const darkIcons = document.querySelectorAll('#darkModeToggle i, #darkModeToggle2 i, #darkModeToggle3 i, #darkModeToggle4 i, #darkModeToggle5 i');
+    
+    darkTexts.forEach(el => {
+        if (el) el.textContent = isDark ? 'الوضع الفاتح' : 'الوضع الداكن';
+    });
+    darkIcons.forEach(el => {
+        if (el) el.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+    });
+}
+
+// التحقق من الوضع المحفوظ
+const savedDarkMode = localStorage.getItem('fbchat_darkmode');
+if (savedDarkMode === 'true') {
+    document.body.classList.add('dark-mode');
+    const darkTexts = document.querySelectorAll('#darkModeText, #darkModeText2, #darkModeText3');
+    const darkIcons = document.querySelectorAll('#darkModeToggle i, #darkModeToggle2 i, #darkModeToggle3 i, #darkModeToggle4 i, #darkModeToggle5 i');
+    darkTexts.forEach(el => {
+        if (el) el.textContent = 'الوضع الفاتح';
+    });
+    darkIcons.forEach(el => {
+        if (el) el.className = 'fas fa-sun';
+    });
+}
+
+// إضافة حدث لكل أزرار الوضع الداكن
+document.querySelectorAll('#darkModeToggle, #darkModeToggle2, #darkModeToggle3, #darkModeToggle4, #darkModeToggle5').forEach(btn => {
+    if (btn) btn.addEventListener('click', toggleDarkMode);
+});
+
 // ===== بداية التشغيل =====
 loadUsers();
 loadUnread();
@@ -703,5 +740,6 @@ if (saved) {
 }
 
 console.log('💬 FB Chat جاهز!');
+console.log('🌙 الوضع الداكن متاح في كل الصفحات');
 console.log('🔑 كل المستخدمين اتمسحوا - سجل حساب جديد');
 console.log('📝 اختر "إنشاء حساب جديد" أو "تسجيل الدخول"');
