@@ -486,94 +486,75 @@ function loadUnread() {
     if (stored) unreadCounts = JSON.parse(stored);
 }
 
-// ===== ✅ البحث عن المستخدمين (من LocalStorage + تليجرام) =====
+// ===== ✅ البحث عن المستخدمين (فقط من تليجرام) =====
 async function searchUsersGlobal(query) {
     if (!query || query.length < 2) return [];
     
     const searchQuery = query.toLowerCase().trim();
-    console.log(`🔍 جاري البحث عن: "${searchQuery}"...`);
+    console.log(`🔍 جاري البحث عن: "${searchQuery}" في تليجرام...`);
     
-    // 1️⃣ البحث في LocalStorage أولاً
-    const localResults = allUsers.filter(u => {
-        if (u.id === currentUser?.id) return false;
-        const username = (u.username || '').toLowerCase();
-        const name = (u.name || '').toLowerCase();
-        return username.includes(searchQuery) || name.includes(searchQuery);
-    });
-    
-    console.log(`📋 نتائج محلية: ${localResults.length}`);
-    
-    // 2️⃣ البحث في تليجرام
-    let telegramResults = [];
     try {
         const url = `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`;
         const response = await fetch(url);
         const data = await response.json();
         
-        if (data.ok) {
-            const users = [];
-            const seenIds = new Set();
-            
-            for (const update of data.result) {
-                if (update.message && update.message.text) {
-                    const text = update.message.text;
-                    if (text.includes('🆕 مستخدم جديد!')) {
-                        const lines = text.split('\n');
-                        let name = '', username = '', id = '';
-                        
-                        for (const line of lines) {
-                            if (line.includes('👤')) {
-                                name = line.replace('👤', '').trim();
-                            }
-                            if (line.includes('🔑')) {
-                                username = line.replace('🔑', '').trim().replace('@', '');
-                            }
-                            if (line.includes('🆔')) {
-                                id = line.replace('🆔', '').trim();
-                            }
+        if (!data.ok) {
+            console.log('❌ خطأ في جلب البيانات من تليجرام');
+            return [];
+        }
+        
+        const users = [];
+        const seenIds = new Set();
+        
+        for (const update of data.result) {
+            if (update.message && update.message.text) {
+                const text = update.message.text;
+                if (text.includes('🆕 مستخدم جديد!')) {
+                    const lines = text.split('\n');
+                    let name = '', username = '', id = '';
+                    
+                    for (const line of lines) {
+                        if (line.includes('👤')) {
+                            name = line.replace('👤', '').trim();
                         }
+                        if (line.includes('🔑')) {
+                            username = line.replace('🔑', '').trim().replace('@', '');
+                        }
+                        if (line.includes('🆔')) {
+                            id = line.replace('🆔', '').trim();
+                        }
+                    }
+                    
+                    if (name && username && id && !seenIds.has(id)) {
+                        // البحث بالاسم أو اليوزرنيم
+                        const nameMatch = name.toLowerCase().includes(searchQuery);
+                        const usernameMatch = username.toLowerCase().includes(searchQuery);
                         
-                        if (name && username && id && !seenIds.has(id)) {
-                            const nameMatch = name.toLowerCase().includes(searchQuery);
-                            const usernameMatch = username.toLowerCase().includes(searchQuery);
-                            
-                            if (nameMatch || usernameMatch) {
-                                seenIds.add(id);
-                                const localUser = allUsers.find(u => u.id === id);
-                                users.push({
-                                    id: id,
-                                    name: name,
-                                    username: username,
-                                    avatar: localUser?.avatar || '',
-                                    online: localUser?.online || false,
-                                    lastSeen: localUser?.lastSeen || new Date().toISOString()
-                                });
-                            }
+                        if (nameMatch || usernameMatch) {
+                            seenIds.add(id);
+                            // البحث عن الصورة من localStorage لو موجود
+                            const localUser = allUsers.find(u => u.id === id);
+                            users.push({
+                                id: id,
+                                name: name,
+                                username: username,
+                                avatar: localUser?.avatar || '',
+                                online: localUser?.online || false,
+                                lastSeen: localUser?.lastSeen || new Date().toISOString()
+                            });
                         }
                     }
                 }
             }
-            telegramResults = users;
-            console.log(`📋 نتائج تليجرام: ${telegramResults.length}`);
         }
+        
+        console.log(`✅ تم العثور على ${users.length} نتيجة للبحث عن "${query}"`);
+        return users;
+        
     } catch (error) {
-        console.error('❌ خطأ في جلب تليجرام:', error);
+        console.error('❌ خطأ في البحث:', error);
+        return [];
     }
-    
-    // 3️⃣ دمج النتائج وإزالة التكرار
-    const allResults = [...localResults, ...telegramResults];
-    const uniqueResults = [];
-    const seenIds = new Set();
-    
-    for (const user of allResults) {
-        if (!seenIds.has(user.id)) {
-            seenIds.add(user.id);
-            uniqueResults.push(user);
-        }
-    }
-    
-    console.log(`✅ إجمالي النتائج: ${uniqueResults.length}`);
-    return uniqueResults;
 }
 
 function showSearchResults(results) {
@@ -584,7 +565,7 @@ function showSearchResults(results) {
         searchResults.style.display = 'block';
         searchResults.innerHTML = `
             <div style="padding:12px; color:var(--text-secondary); text-align:center;">
-                <i class="fas fa-search"></i> لا توجد نتائج
+                <i class="fas fa-search"></i> لا توجد نتائج للبحث في تليجرام
             </div>
         `;
         return;
@@ -596,6 +577,7 @@ function showSearchResults(results) {
         const div = document.createElement('div');
         div.className = 'search-result-item';
         
+        // تحديد مصدر المستخدم
         const isLocal = allUsers.some(u => u.id === user.id && u.password);
         const sourceText = isLocal ? '✅ مسجل محلياً' : '🌐 من تليجرام';
         const sourceColor = isLocal ? '#31a24c' : '#0084ff';
@@ -837,6 +819,6 @@ if (savedUser) {
 }
 
 console.log('💬 FB Chat جاهز!');
-console.log('🔍 البحث يجيب من LocalStorage + تليجرام');
+console.log('🔍 البحث يجيب من تليجرام فقط');
 console.log('🌙 الوضع الداكن متاح في كل الصفحات');
 console.log('📝 اختر "إنشاء حساب جديد" أو "تسجيل الدخول"');
