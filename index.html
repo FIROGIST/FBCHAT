@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 </head>
 <body>
-    <!-- ===== شاشة تسجيل الدخول ===== -->
+    <!-- ===== شاشة تسجيل الدخول الرئيسية ===== -->
     <div id="loginScreen">
         <div class="login-container">
             <div class="logo">
@@ -16,6 +16,63 @@
                 <span>FB Chat</span>
             </div>
             <p class="subtitle">تواصل مع أصدقائك بكل سهولة</p>
+            
+            <div class="login-box">
+                <!-- زر تسجيل الدخول -->
+                <button id="goToLoginBtn" class="btn-primary" style="background:#0084ff;">
+                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                </button>
+
+                <div class="divider"><span>أو</span></div>
+
+                <!-- زر إنشاء حساب جديد -->
+                <button id="goToRegisterBtn" class="btn-secondary">
+                    <i class="fas fa-user-plus"></i> إنشاء حساب جديد
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== شاشة تسجيل الدخول (للمستخدمين المسجلين) ===== -->
+    <div id="loginExistingScreen" style="display:none;">
+        <div class="login-container">
+            <div class="logo">
+                <i class="fab fa-facebook-messenger"></i>
+                <span>FB Chat</span>
+            </div>
+            <p class="subtitle">تسجيل الدخول إلى حسابك</p>
+            
+            <div class="login-box">
+                <div class="input-group">
+                    <i class="fas fa-at"></i>
+                    <input type="text" id="loginUsername" placeholder="اليوزرنيم" />
+                </div>
+
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="loginPassword" placeholder="كلمة المرور" />
+                </div>
+
+                <button id="loginBtn" class="btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                </button>
+
+                <div class="divider"><span>أو</span></div>
+                <button id="backToMainLoginBtn" class="btn-secondary">
+                    <i class="fas fa-arrow-left"></i> العودة للقائمة الرئيسية
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== شاشة إنشاء حساب جديد ===== -->
+    <div id="registerScreen" style="display:none;">
+        <div class="login-container">
+            <div class="logo">
+                <i class="fab fa-facebook-messenger"></i>
+                <span>FB Chat</span>
+            </div>
+            <p class="subtitle">إنشاء حساب جديد</p>
             
             <div class="login-box">
                 <div class="avatar-upload">
@@ -46,45 +103,12 @@
                 </div>
 
                 <button id="registerBtn" class="btn-primary">
-                    <i class="fas fa-arrow-right"></i> بدء المحادثة
+                    <i class="fas fa-user-plus"></i> إنشاء حساب
                 </button>
 
                 <div class="divider"><span>أو</span></div>
-                
-                <button id="goToLoginBtn" class="btn-secondary">
-                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ===== شاشة تسجيل الدخول للمستخدمين المسجلين ===== -->
-    <div id="loginExistingScreen" style="display:none;">
-        <div class="login-container">
-            <div class="logo">
-                <i class="fab fa-facebook-messenger"></i>
-                <span>FB Chat</span>
-            </div>
-            <p class="subtitle">تسجيل الدخول</p>
-            
-            <div class="login-box">
-                <div class="input-group">
-                    <i class="fas fa-at"></i>
-                    <input type="text" id="loginUsername" placeholder="اليوزرنيم" />
-                </div>
-
-                <div class="input-group">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="loginPassword" placeholder="كلمة المرور" />
-                </div>
-
-                <button id="loginBtn" class="btn-primary">
-                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
-                </button>
-
-                <div class="divider"><span>أو</span></div>
-                <button id="goToRegisterBtn" class="btn-secondary">
-                    <i class="fas fa-user-plus"></i> إنشاء حساب جديد
+                <button id="backToMainLoginBtn2" class="btn-secondary">
+                    <i class="fas fa-arrow-left"></i> العودة للقائمة الرئيسية
                 </button>
             </div>
         </div>
