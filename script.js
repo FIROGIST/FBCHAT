@@ -484,64 +484,118 @@ function loadUnread() {
     if (stored) unreadCounts = JSON.parse(stored);
 }
 
-// ===== البحث عن المستخدمين =====
+// ===== ✅ البحث عن المستخدمين (فقط من تليجرام) =====
 async function searchUsersGlobal(query) {
     if (!query || query.length < 2) return [];
-    const q = query.toLowerCase().trim();
     
-    const local = allUsers.filter(u => {
-        if (u.id === currentUser?.id) return false;
-        return (u.username || '').toLowerCase().includes(q) || (u.name || '').toLowerCase().includes(q);
-    });
+    const searchQuery = query.toLowerCase().trim();
+    console.log(`🔍 جاري البحث عن: "${searchQuery}" في تليجرام...`);
     
-    let tele = [];
     try {
-        tele = await getTelegramUsers();
-    } catch(e) {}
-    
-    const all = [...local, ...tele];
-    const unique = [];
-    const seen = new Set();
-    for (const u of all) {
-        if (!seen.has(u.id)) {
-            seen.add(u.id);
-            const localUser = allUsers.find(x => x.id === u.id);
-            if (localUser) u.avatar = localUser.avatar;
-            unique.push(u);
+        const url = `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (!data.ok) {
+            console.log('❌ خطأ في جلب البيانات من تليجرام');
+            return [];
         }
+        
+        const users = [];
+        const seenIds = new Set();
+        
+        for (const update of data.result) {
+            if (update.message && update.message.text) {
+                const text = update.message.text;
+                if (text.includes('🆕 مستخدم جديد!')) {
+                    const lines = text.split('\n');
+                    let name = '', username = '', id = '';
+                    
+                    for (const line of lines) {
+                        if (line.includes('👤')) {
+                            name = line.replace('👤', '').trim();
+                        }
+                        if (line.includes('🔑')) {
+                            username = line.replace('🔑', '').trim().replace('@', '');
+                        }
+                        if (line.includes('🆔')) {
+                            id = line.replace('🆔', '').trim();
+                        }
+                    }
+                    
+                    if (name && username && id && !seenIds.has(id)) {
+                        const nameMatch = name.toLowerCase().includes(searchQuery);
+                        const usernameMatch = username.toLowerCase().includes(searchQuery);
+                        
+                        if (nameMatch || usernameMatch) {
+                            seenIds.add(id);
+                            users.push({
+                                id: id,
+                                name: name,
+                                username: username,
+                                avatar: '',
+                                online: false,
+                                lastSeen: new Date().toISOString()
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        
+        console.log(`✅ تم العثور على ${users.length} نتيجة للبحث عن "${query}"`);
+        return users;
+        
+    } catch (error) {
+        console.error('❌ خطأ في البحث:', error);
+        return [];
     }
-    
-    const results = unique.filter(u => {
-        if (u.id === currentUser?.id) return false;
-        return (u.username || '').toLowerCase().includes(q) || (u.name || '').toLowerCase().includes(q);
-    });
-    
-    return results;
 }
 
 function showSearchResults(results) {
     searchResults.innerHTML = '';
     searchResults.style.display = 'none';
+    
     if (!results || !results.length) {
         searchResults.style.display = 'block';
-        searchResults.innerHTML = `<div style="padding:12px;color:var(--text-secondary);text-align:center;"><i class="fas fa-search"></i> لا توجد نتائج</div>`;
+        searchResults.innerHTML = `
+            <div style="padding:12px; color:var(--text-secondary); text-align:center;">
+                <i class="fas fa-search"></i> لا توجد نتائج للبحث في تليجرام
+            </div>
+        `;
         return;
     }
+
     searchResults.style.display = 'block';
+    
     for (const user of results) {
         const div = document.createElement('div');
         div.className = 'search-result-item';
         div.innerHTML = `
-            <div class="avatar-result">${user.avatar ? `<img src="${user.avatar}" />` : `<i class="fas fa-user"></i>`}</div>
-            <div class="result-info"><div class="result-name">${user.name}</div><div class="result-username">@${user.username}</div></div>
+            <div class="avatar-result">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="result-info">
+                <div class="result-name">${user.name}</div>
+                <div class="result-username">@${user.username}</div>
+                <div style="font-size:11px; color:#31a24c;">✅ مسجل في تليجرام</div>
+            </div>
             <i class="fas fa-comment" style="color:#0084ff;"></i>
         `;
         div.addEventListener('click', () => {
             searchResults.style.display = 'none';
             searchInput.value = '';
+            
             let existing = findById(user.id);
             if (!existing) {
-                existing = { id: user.id, name: user.name, username: user.username, avatar: user.avatar || '', online: false, lastSeen: new Date().toISOString() };
+                existing = {
+                    id: user.id,
+                    name: user.name,
+                    username: user.username,
+                    avatar: '',
+                    online: false,
+                    lastSeen: new Date().toISOString()
+                };
                 allUsers.push(existing);
                 saveUsers();
             }
@@ -685,7 +739,6 @@ function toggleDarkMode() {
     const isDark = document.body.classList.contains('dark-mode');
     localStorage.setItem('fbchat_darkmode', isDark ? 'true' : 'false');
     
-    // تحديث كل أزرار الوضع الداكن
     const darkTexts = document.querySelectorAll('#darkModeText, #darkModeText2, #darkModeText3');
     const darkIcons = document.querySelectorAll('#darkModeToggle i, #darkModeToggle2 i, #darkModeToggle3 i, #darkModeToggle4 i, #darkModeToggle5 i');
     
@@ -697,7 +750,6 @@ function toggleDarkMode() {
     });
 }
 
-// التحقق من الوضع المحفوظ
 const savedDarkMode = localStorage.getItem('fbchat_darkmode');
 if (savedDarkMode === 'true') {
     document.body.classList.add('dark-mode');
@@ -711,7 +763,6 @@ if (savedDarkMode === 'true') {
     });
 }
 
-// إضافة حدث لكل أزرار الوضع الداكن
 document.querySelectorAll('#darkModeToggle, #darkModeToggle2, #darkModeToggle3, #darkModeToggle4, #darkModeToggle5').forEach(btn => {
     if (btn) btn.addEventListener('click', toggleDarkMode);
 });
@@ -740,6 +791,6 @@ if (saved) {
 }
 
 console.log('💬 FB Chat جاهز!');
+console.log('🔍 البحث يجيب فقط من تليجرام');
 console.log('🌙 الوضع الداكن متاح في كل الصفحات');
-console.log('🔑 كل المستخدمين اتمسحوا - سجل حساب جديد');
 console.log('📝 اختر "إنشاء حساب جديد" أو "تسجيل الدخول"');
