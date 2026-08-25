@@ -12,20 +12,26 @@
     <div id="loginScreen">
         <div class="login-container">
             <div class="logo">
-                <i class="fab fa-facebook-messenger"></i>
+                <img src="1234.png" alt="FB Chat" class="logo-img" />
                 <span>FB Chat</span>
             </div>
+            
+            <!-- زر الوضع الداكن -->
+            <div style="display:flex; justify-content:center; gap:8px; margin-bottom:12px;">
+                <button id="darkModeToggle" class="btn-secondary" style="padding:8px 16px; font-size:14px; width:auto;">
+                    <i class="fas fa-moon"></i> <span id="darkModeText">الوضع الداكن</span>
+                </button>
+            </div>
+            
             <p class="subtitle">تواصل مع أصدقائك بكل سهولة</p>
             
             <div class="login-box">
-                <!-- زر تسجيل الدخول -->
                 <button id="goToLoginBtn" class="btn-primary" style="background:#0084ff;">
                     <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
                 </button>
 
                 <div class="divider"><span>أو</span></div>
 
-                <!-- زر إنشاء حساب جديد -->
                 <button id="goToRegisterBtn" class="btn-secondary">
                     <i class="fas fa-user-plus"></i> إنشاء حساب جديد
                 </button>
@@ -33,13 +39,21 @@
         </div>
     </div>
 
-    <!-- ===== شاشة تسجيل الدخول (للمستخدمين المسجلين) ===== -->
+    <!-- ===== شاشة تسجيل الدخول ===== -->
     <div id="loginExistingScreen" style="display:none;">
         <div class="login-container">
             <div class="logo">
-                <i class="fab fa-facebook-messenger"></i>
+                <img src="1234.png" alt="FB Chat" class="logo-img" />
                 <span>FB Chat</span>
             </div>
+            
+            <!-- زر الوضع الداكن -->
+            <div style="display:flex; justify-content:center; gap:8px; margin-bottom:12px;">
+                <button id="darkModeToggle2" class="btn-secondary" style="padding:8px 16px; font-size:14px; width:auto;">
+                    <i class="fas fa-moon"></i> <span id="darkModeText2">الوضع الداكن</span>
+                </button>
+            </div>
+            
             <p class="subtitle">تسجيل الدخول إلى حسابك</p>
             
             <div class="login-box">
@@ -69,9 +83,17 @@
     <div id="registerScreen" style="display:none;">
         <div class="login-container">
             <div class="logo">
-                <i class="fab fa-facebook-messenger"></i>
+                <img src="1234.png" alt="FB Chat" class="logo-img" />
                 <span>FB Chat</span>
             </div>
+            
+            <!-- زر الوضع الداكن -->
+            <div style="display:flex; justify-content:center; gap:8px; margin-bottom:12px;">
+                <button id="darkModeToggle3" class="btn-secondary" style="padding:8px 16px; font-size:14px; width:auto;">
+                    <i class="fas fa-moon"></i> <span id="darkModeText3">الوضع الداكن</span>
+                </button>
+            </div>
+            
             <p class="subtitle">إنشاء حساب جديد</p>
             
             <div class="login-box">
@@ -127,6 +149,9 @@
                 </div>
             </div>
             <div style="display:flex; gap:8px;">
+                <button id="darkModeToggle4" class="icon-btn" title="الوضع الداكن">
+                    <i class="fas fa-moon"></i>
+                </button>
                 <button id="logoutBtn" class="icon-btn" title="تسجيل الخروج">
                     <i class="fas fa-sign-out-alt"></i>
                 </button>
@@ -175,6 +200,9 @@
                 </div>
             </div>
             <div class="header-right">
+                <button id="darkModeToggle5" class="icon-btn" title="الوضع الداكن">
+                    <i class="fas fa-moon"></i>
+                </button>
                 <button id="clearChatBtn" class="icon-btn" title="مسح المحادثة">
                     <i class="fas fa-trash"></i>
                 </button>
@@ -185,12 +213,11 @@
             <div id="messages"></div>
         </div>
 
-        <!-- معاينة الرد -->
-        <div id="replyPreview" style="display:none; padding:8px 16px; background:#e7f3ff; border-radius:8px; margin:0 16px;">
+        <div id="replyPreview" style="display:none; padding:8px 16px; background:var(--bg-input); border-radius:8px; margin:0 16px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <small style="color:#0084ff;">الرد على:</small>
-                    <div id="replyText" style="font-size:14px; color:#050505;"></div>
+                    <div id="replyText" style="font-size:14px; color:var(--text-primary);"></div>
                 </div>
                 <button id="cancelReplyBtn" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size:18px;">
                     <i class="fas fa-times"></i>
@@ -212,8 +239,7 @@
             </button>
         </div>
 
-        <!-- إيموجي منبثق -->
-        <div id="emojiPicker" style="display:none; position:absolute; bottom:80px; left:10px; background:white; border-radius:16px; padding:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); z-index:1000; max-width:300px; flex-wrap:wrap;">
+        <div id="emojiPicker" style="display:none; position:absolute; bottom:80px; left:10px; background:var(--bg-secondary); border-radius:16px; padding:12px; box-shadow:var(--shadow); z-index:1000; max-width:300px; flex-wrap:wrap;">
             <div style="display:flex; flex-wrap:wrap; gap:4px; max-width:280px;">
                 <span style="cursor:pointer; font-size:28px; padding:4px;">😊</span>
                 <span style="cursor:pointer; font-size:28px; padding:4px;">😂</span>
