@@ -882,7 +882,7 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// ===== التعامل مع رابط الدعوة عند فتح الموقع =====
+// ===== ✅ التعامل مع رابط الدعوة (المعدل) =====
 function handleInviteLink() {
     const params = new URLSearchParams(window.location.search);
     const invitedUsername = params.get('invite');
@@ -891,11 +891,15 @@ function handleInviteLink() {
         console.log(`🔗 تم الدخول عبر دعوة من @${invitedUsername}`);
         localStorage.setItem('fbchat_invited_by', invitedUsername);
         localStorage.setItem('fbchat_pending_invite', invitedUsername);
-        
+
+        // إذا كان المستخدم مسجل دخول بالفعل
         if (currentUser) {
             setTimeout(() => {
                 openChatWithInviter(invitedUsername);
             }, 1000);
+        } else {
+            // إذا لم يكن مسجل، سيتم التعامل مع الدعوة بعد تسجيل الدخول
+            console.log('⏳ في انتظار تسجيل الدخول... سيتم فتح الدعوة تلقائيًا.');
         }
     }
 }
@@ -932,6 +936,7 @@ async function openChatWithInviter(username) {
         }, 500);
     } else {
         console.log('❌ لم يتم العثور على المستخدم الداعي');
+        alert('⚠️ لم يتم العثور على المستخدم الداعي. تأكد من أن المستخدم مسجل في تليجرام.');
     }
 }
 
