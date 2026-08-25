@@ -13,7 +13,10 @@
         <div class="login-container">
             <div class="logo">
                 <img src="1234.png" alt="FB Chat" class="logo-img" />
-                <span>FB Chat</span>
+                <span class="logo-text">
+                    <span class="fb-fire">FB</span>
+                    <span class="chat-text">Chat</span>
+                </span>
             </div>
             
             <!-- زر الوضع الداكن -->
@@ -44,7 +47,10 @@
         <div class="login-container">
             <div class="logo">
                 <img src="1234.png" alt="FB Chat" class="logo-img" />
-                <span>FB Chat</span>
+                <span class="logo-text">
+                    <span class="fb-fire">FB</span>
+                    <span class="chat-text">Chat</span>
+                </span>
             </div>
             
             <!-- زر الوضع الداكن -->
@@ -84,7 +90,10 @@
         <div class="login-container">
             <div class="logo">
                 <img src="1234.png" alt="FB Chat" class="logo-img" />
-                <span>FB Chat</span>
+                <span class="logo-text">
+                    <span class="fb-fire">FB</span>
+                    <span class="chat-text">Chat</span>
+                </span>
             </div>
             
             <!-- زر الوضع الداكن -->
@@ -149,6 +158,9 @@
                 </div>
             </div>
             <div style="display:flex; gap:8px;">
+                <button id="inviteBtn" class="icon-btn" title="دعوة صديق">
+                    <i class="fas fa-share-alt"></i>
+                </button>
                 <button id="darkModeToggle4" class="icon-btn" title="الوضع الداكن">
                     <i class="fas fa-moon"></i>
                 </button>
@@ -258,6 +270,41 @@
                 <span style="cursor:pointer; font-size:28px; padding:4px;">😭</span>
                 <span style="cursor:pointer; font-size:28px; padding:4px;">😡</span>
             </div>
+        </div>
+    </div>
+
+    <!-- ===== نافذة الدعوة ===== -->
+    <div id="inviteModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+        <div class="modal-content" style="background:var(--bg-secondary); border-radius:24px; padding:30px; max-width:400px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3); animation:modalFadeIn 0.3s ease;">
+            <div style="font-size:48px; margin-bottom:12px;">🔗</div>
+            <h3 style="color:var(--text-primary); margin-bottom:8px;">دعوة صديق</h3>
+            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">شارك الرابط مع أصدقائك لبدء الدردشة معك</p>
+            
+            <div style="display:flex; gap:10px; background:var(--bg-input); border-radius:12px; padding:10px 16px; margin-bottom:16px;">
+                <input type="text" id="inviteLinkInput" readonly style="flex:1; background:transparent; border:none; outline:none; color:var(--text-primary); font-size:14px; direction:ltr;" />
+                <button id="copyInviteBtn" class="share-btn copy" style="background:#0084ff; color:white; border:none; border-radius:8px; padding:8px 16px; cursor:pointer; font-weight:600;">
+                    <i class="fas fa-copy"></i> نسخ
+                </button>
+            </div>
+            
+            <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                <button onclick="shareInvite('whatsapp')" class="share-btn whatsapp" style="background:#25D366; color:white; border:none; border-radius:12px; padding:10px 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:14px; transition:transform 0.2s;">
+                    <i class="fab fa-whatsapp"></i> واتساب
+                </button>
+                <button onclick="shareInvite('facebook')" class="share-btn facebook" style="background:#1877F2; color:white; border:none; border-radius:12px; padding:10px 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:14px; transition:transform 0.2s;">
+                    <i class="fab fa-facebook"></i> فيسبوك
+                </button>
+                <button onclick="shareInvite('twitter')" class="share-btn twitter" style="background:#000000; color:white; border:none; border-radius:12px; padding:10px 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:14px; transition:transform 0.2s;">
+                    <i class="fab fa-twitter"></i> تويتر
+                </button>
+                <button onclick="shareInvite('telegram')" class="share-btn telegram" style="background:#0088cc; color:white; border:none; border-radius:12px; padding:10px 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:14px; transition:transform 0.2s;">
+                    <i class="fab fa-telegram"></i> تليجرام
+                </button>
+            </div>
+            
+            <button onclick="closeInviteModal()" class="close-btn" style="margin-top:16px; background:transparent; border:none; color:var(--text-secondary); cursor:pointer; font-size:14px;">
+                <i class="fas fa-times"></i> إغلاق
+            </button>
         </div>
     </div>
 
