@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FB Chat - تواصل مع الأصدقاء</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+    <!-- ===== شاشة تسجيل الدخول ===== -->
+    <div id="loginScreen">
+        <div class="login-container">
+            <div class="logo">
+                <i class="fab fa-facebook-messenger"></i>
+                <span>FB Chat</span>
+            </div>
+            <p class="subtitle">تواصل مع أصدقائك بكل سهولة</p>
+            
+            <div class="login-box">
+                <!-- صورة الملف الشخصي -->
+                <div class="avatar-upload">
+                    <div class="avatar-preview" id="avatarPreview">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <label for="avatarInput" class="avatar-label">
+                        <i class="fas fa-camera"></i>
+                        <span>إضافة صورة</span>
+                    </label>
+                    <input type="file" id="avatarInput" accept="image/*" style="display:none;" />
+                </div>
+
+                <!-- اسم المستخدم -->
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="fullName" placeholder="الاسم الكامل" />
+                </div>
+
+                <!-- اليوزرنيم -->
+                <div class="input-group">
+                    <i class="fas fa-at"></i>
+                    <input type="text" id="username" placeholder="اليوزرنيم (مثال: ahmed_123)" />
+                    <span class="username-hint">@</span>
+                </div>
+
+                <button id="registerBtn" class="btn-primary">
+                    <i class="fas fa-arrow-right"></i> بدء المحادثة
+                </button>
+
+                <div class="divider">
+                    <span>أو</span>
+                </div>
+
+                <p style="color:#65676b; font-size:14px;">
+                    <i class="fas fa-info-circle"></i>
+                    ابحث عن أصدقائك باستخدام اليوزرنيم
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== شاشة البحث والمحادثات ===== -->
+    <div id="mainScreen" style="display:none;">
+        <!-- الهيدر -->
+        <div id="mainHeader">
+            <div class="user-info">
+                <div class="avatar-small" id="userAvatarSmall">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <div class="user-name-display" id="displayName">الاسم</div>
+                    <div class="user-username-display" id="displayUsername">@username</div>
+                </div>
+            </div>
+            <button id="logoutBtn" class="icon-btn">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+
+        <!-- شريط البحث -->
+        <div id="searchBar">
+            <div class="search-input-group">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="ابحث عن مستخدم باليوزرنيم..." />
+                <button id="searchBtn"><i class="fas fa-arrow-right"></i></button>
+            </div>
+            <div id="searchResults" style="display:none;"></div>
+        </div>
+
+        <!-- المحادثات المفتوحة -->
+        <div id="chatsList">
+            <div class="chats-header">
+                <span>المحادثات</span>
+                <i class="fas fa-edit"></i>
+            </div>
+            <div id="chatsContainer">
+                <div class="empty-chats">
+                    <i class="fas fa-comment-dots"></i>
+                    <p>لا توجد محادثات بعد</p>
+                    <span>ابحث عن أصدقائك وابدأ الدردشة</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== شاشة الشات ===== -->
+    <div id="chatScreen" style="display:none;">
+        <div id="chatHeader">
+            <div class="header-left">
+                <button id="backToMainBtn" class="icon-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="chat-info">
+                    <div class="chat-avatar" id="chatAvatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <div class="chat-name" id="chatPartnerName">المستخدم</div>
+                        <div class="chat-status">🟢 متصل الآن</div>
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn">
+                    <i class="fas fa-phone"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="messagesContainer">
+            <div id="messages"></div>
+        </div>
+
+        <div id="inputArea">
+            <button class="icon-btn" id="emojiBtn">
+                <i class="far fa-smile"></i>
+            </button>
+            <input type="text" id="messageInput" placeholder="اكتب رسالة..." />
+            <button id="sendBtn" class="send-btn">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
