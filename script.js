@@ -144,7 +144,6 @@ function loadUsers() {
     if (stored) { 
         allUsers = JSON.parse(stored); 
     } else {
-        // 🆕 مافيش مستخدمين تجريبيين - الكل يسجل من الصفر
         allUsers = [];
         saveUsers();
     }
@@ -181,7 +180,7 @@ function addChat(pid) {
 
 function getChatId(u1, u2) { return [u1, u2].sort().join('_'); }
 
-// ===== التنقل بين الشاشات =====
+// ===== ✅ التنقل بين الشاشات (إصلاح الأزرار) =====
 function showLoginScreen() {
     loginScreen.style.display = 'block';
     loginExistingScreen.style.display = 'none';
@@ -206,18 +205,20 @@ function showRegisterScreen() {
     chatScreen.style.display = 'none';
 }
 
-// ===== أحداث الأزرار الرئيسية =====
-goToLoginBtn.addEventListener('click', showLoginExistingScreen);
-goToRegisterBtn.addEventListener('click', showRegisterScreen);
-backToMainLoginBtn.addEventListener('click', showLoginScreen);
-backToMainLoginBtn2.addEventListener('click', showLoginScreen);
+// ===== ✅ أحداث الأزرار الرئيسية (إصلاح) =====
+if (goToLoginBtn) goToLoginBtn.addEventListener('click', showLoginExistingScreen);
+if (goToRegisterBtn) goToRegisterBtn.addEventListener('click', showRegisterScreen);
+if (backToMainLoginBtn) backToMainLoginBtn.addEventListener('click', showLoginScreen);
+if (backToMainLoginBtn2) backToMainLoginBtn2.addEventListener('click', showLoginScreen);
 
 // ===== إظهار/إخفاء كلمة المرور =====
-togglePassword?.addEventListener('click', () => {
-    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-    passwordInput.setAttribute('type', type);
-    togglePassword.className = type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
-});
+if (togglePassword) {
+    togglePassword.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        togglePassword.className = type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+    });
+}
 
 // ===== تسجيل مستخدم جديد =====
 registerBtn.addEventListener('click', async () => {
@@ -227,7 +228,6 @@ registerBtn.addEventListener('click', async () => {
     if (!name || !username || !password) return alert('⚠️ ملء جميع الحقول');
     if (password.length < 4) return alert('⚠️ الباسورد 4 أحرف على الأقل');
     
-    // التحقق من تليجرام
     const teleUsers = await getTelegramUsers();
     if (teleUsers.find(u => u.username?.toLowerCase() === username.toLowerCase())) {
         return alert('⚠️ هذا اليوزرنيم مستخدم بالفعل!');
@@ -258,7 +258,7 @@ loginBtn.addEventListener('click', () => {
     const password = loginPassword.value.trim();
     if (!username || !password) return alert('⚠️ ادخل اليوزرنيم والباسورد');
     const user = findUser(username);
-    if (!user) return alert('⚠️ المستغير غير موجود - تأكد من اليوزرنيم');
+    if (!user) return alert('⚠️ المستخدم غير موجود - تأكد من اليوزرنيم');
     if (user.password !== password) return alert('⚠️ كلمة المرور غير صحيحة');
     currentUser = user;
     currentUser.online = true;
@@ -269,24 +269,26 @@ loginBtn.addEventListener('click', () => {
 });
 
 // ===== الضغط على Enter في حقول التسجيل =====
-fullNameInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') usernameInput.focus(); });
-usernameInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') passwordInput.focus(); });
-passwordInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') registerBtn.click(); });
+if (fullNameInput) fullNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') usernameInput.focus(); });
+if (usernameInput) usernameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') passwordInput.focus(); });
+if (passwordInput) passwordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') registerBtn.click(); });
 
-loginUsername?.addEventListener('keypress', (e) => { if (e.key === 'Enter') loginPassword.focus(); });
-loginPassword?.addEventListener('keypress', (e) => { if (e.key === 'Enter') loginBtn.click(); });
+if (loginUsername) loginUsername.addEventListener('keypress', (e) => { if (e.key === 'Enter') loginPassword.focus(); });
+if (loginPassword) loginPassword.addEventListener('keypress', (e) => { if (e.key === 'Enter') loginBtn.click(); });
 
 // ===== رفع الصورة =====
-avatarInput?.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            avatarPreview.innerHTML = `<img src="${e.target.result}" alt="avatar" />`;
-        };
-        reader.readAsDataURL(file);
-    }
-});
+if (avatarInput) {
+    avatarInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                avatarPreview.innerHTML = `<img src="${e.target.result}" alt="avatar" />`;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
 
 // ===== عرض الشاشة الرئيسية =====
 function showMainScreen() {
@@ -341,7 +343,7 @@ function displayMessage(text, isMine, time, id, reply, deleted, img, forwarded) 
     return div.dataset.msgId;
 }
 
-// ===== دوال الإجراءات (Reply, Forward, Delete) =====
+// ===== دوال الإجراءات =====
 window.replyMsg = function(id) {
     const el = document.querySelector(`[data-msg-id="${id}"]`);
     if (!el) return;
@@ -373,10 +375,12 @@ window.delMsg = async function(id) {
     saveLocal(chatId, updated);
 };
 
-cancelReplyBtn?.addEventListener('click', () => {
-    replyToMessage = null;
-    replyPreview.style.display = 'none';
-});
+if (cancelReplyBtn) {
+    cancelReplyBtn.addEventListener('click', () => {
+        replyToMessage = null;
+        replyPreview.style.display = 'none';
+    });
+}
 
 // ===== تحميل الرسائل =====
 async function loadMessages() {
@@ -485,19 +489,16 @@ async function searchUsersGlobal(query) {
     if (!query || query.length < 2) return [];
     const q = query.toLowerCase().trim();
     
-    // من localStorage
     const local = allUsers.filter(u => {
         if (u.id === currentUser?.id) return false;
         return (u.username || '').toLowerCase().includes(q) || (u.name || '').toLowerCase().includes(q);
     });
     
-    // من تليجرام
     let tele = [];
     try {
         tele = await getTelegramUsers();
     } catch(e) {}
     
-    // دمج وإزالة تكرار
     const all = [...local, ...tele];
     const unique = [];
     const seen = new Set();
@@ -510,7 +511,6 @@ async function searchUsersGlobal(query) {
         }
     }
     
-    // فلترة
     const results = unique.filter(u => {
         if (u.id === currentUser?.id) return false;
         return (u.username || '').toLowerCase().includes(q) || (u.name || '').toLowerCase().includes(q);
@@ -585,41 +585,49 @@ document.addEventListener('click', (e) => {
 });
 
 // ===== إيموجي =====
-emojiBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'flex' : 'none';
-});
-emojiPicker?.addEventListener('click', (e) => {
-    if (e.target.tagName === 'SPAN') {
-        messageInput.value += e.target.textContent;
-        messageInput.focus();
-        emojiPicker.style.display = 'none';
-    }
-});
+if (emojiBtn) {
+    emojiBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'flex' : 'none';
+    });
+}
+if (emojiPicker) {
+    emojiPicker.addEventListener('click', (e) => {
+        if (e.target.tagName === 'SPAN') {
+            messageInput.value += e.target.textContent;
+            messageInput.focus();
+            emojiPicker.style.display = 'none';
+        }
+    });
+}
 document.addEventListener('click', () => { if (emojiPicker) emojiPicker.style.display = 'none'; });
 
 // ===== صور =====
-imageBtn?.addEventListener('click', () => imageInput?.click());
-imageInput?.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (file && currentChatPartner) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const data = e.target.result;
-            const chatId = getChatId(currentUser.id, currentChatPartner.id);
-            const id = displayMessage('', true, getCurrentTime(), null, null, false, data);
-            await saveMsg(chatId, currentUser.id, currentUser.name, currentChatPartner.id, '📷 صورة');
-            const local = loadLocal(chatId);
-            local.push({ id, text: '📷 صورة', senderId: currentUser.id, time: getCurrentTime(), image: data });
-            saveLocal(chatId, local);
-            addChat(currentChatPartner.id);
-            saveChats();
-            renderChats();
-        };
-        reader.readAsDataURL(file);
-        imageInput.value = '';
-    }
-});
+if (imageBtn) {
+    imageBtn.addEventListener('click', () => imageInput?.click());
+}
+if (imageInput) {
+    imageInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file && currentChatPartner) {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const data = e.target.result;
+                const chatId = getChatId(currentUser.id, currentChatPartner.id);
+                const id = displayMessage('', true, getCurrentTime(), null, null, false, data);
+                await saveMsg(chatId, currentUser.id, currentUser.name, currentChatPartner.id, '📷 صورة');
+                const local = loadLocal(chatId);
+                local.push({ id, text: '📷 صورة', senderId: currentUser.id, time: getCurrentTime(), image: data });
+                saveLocal(chatId, local);
+                addChat(currentChatPartner.id);
+                saveChats();
+                renderChats();
+            };
+            reader.readAsDataURL(file);
+            imageInput.value = '';
+        }
+    });
+}
 
 // ===== الشات =====
 sendBtn.addEventListener('click', async () => {
@@ -651,15 +659,17 @@ backToMainBtn.addEventListener('click', () => {
     renderChats();
 });
 
-clearChatBtn?.addEventListener('click', () => {
-    if (!currentChatPartner) return;
-    if (confirm('مسح كل الرسائل؟')) {
-        const chatId = getChatId(currentUser.id, currentChatPartner.id);
-        saveLocal(chatId, []);
-        messagesDiv.innerHTML = '';
-        renderChats();
-    }
-});
+if (clearChatBtn) {
+    clearChatBtn.addEventListener('click', () => {
+        if (!currentChatPartner) return;
+        if (confirm('مسح كل الرسائل؟')) {
+            const chatId = getChatId(currentUser.id, currentChatPartner.id);
+            saveLocal(chatId, []);
+            messagesDiv.innerHTML = '';
+            renderChats();
+        }
+    });
+}
 
 logoutBtn.addEventListener('click', () => {
     if (confirm('تسجيل الخروج؟')) {
