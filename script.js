@@ -1,876 +1,283 @@
+// ===== 💣 تفجير كل البيانات القديمة =====
+console.log('🔥 جاري مسح كل البيانات القديمة...');
+localStorage.clear();
+console.log('✅ تم مسح كل البيانات!');
+
 // ===== إعدادات تليجرام =====
 const BOT_TOKEN = '8832391928:AAEsqHtKoMSmpd6JCYtP8wKp-OpcNmxDT5g';
 const CHAT_ID = '5511952564';
 
-// ===== متغيرات عامة =====
+// ===== متغيرات =====
 let currentUser = null;
 let currentChatPartner = null;
-let messageInterval = null;
 let allUsers = [];
-let replyToMessage = null;
-let forwardMessage = null;
 let localMessages = {};
 let unreadCounts = {};
-let lastMessageId = 0;
+let messageInterval = null;
+let replyToMessage = null;
 
 // ===== عناصر DOM =====
-const loginScreen = document.getElementById('loginScreen');
-const loginExistingScreen = document.getElementById('loginExistingScreen');
-const mainScreen = document.getElementById('mainScreen');
-const chatScreen = document.getElementById('chatScreen');
+const $ = id => document.getElementById(id);
+const loginScreen = $('loginScreen');
+const loginExistingScreen = $('loginExistingScreen');
+const registerScreen = $('registerScreen');
+const mainScreen = $('mainScreen');
+const chatScreen = $('chatScreen');
 
-const avatarInput = document.getElementById('avatarInput');
-const avatarPreview = document.getElementById('avatarPreview');
-const fullNameInput = document.getElementById('fullName');
-const usernameInput = document.getElementById('username');
-const passwordInput = document.getElementById('password');
-const registerBtn = document.getElementById('registerBtn');
-const togglePassword = document.getElementById('togglePassword');
-const goToLoginBtn = document.getElementById('goToLoginBtn');
+const avatarPreview = $('avatarPreview');
+const avatarInput = $('avatarInput');
+const fullNameInput = $('fullName');
+const usernameInput = $('username');
+const passwordInput = $('password');
+const registerBtn = $('registerBtn');
+const togglePassword = $('togglePassword');
 
-const loginUsername = document.getElementById('loginUsername');
-const loginPassword = document.getElementById('loginPassword');
-const loginBtn = document.getElementById('loginBtn');
-const goToRegisterBtn = document.getElementById('goToRegisterBtn');
+const goToLoginBtn = $('goToLoginBtn');
+const goToRegisterBtn = $('goToRegisterBtn');
+const backToMainLoginBtn = $('backToMainLoginBtn');
+const backToMainLoginBtn2 = $('backToMainLoginBtn2');
 
-const userAvatarSmall = document.getElementById('userAvatarSmall');
-const displayName = document.getElementById('displayName');
-const displayUsername = document.getElementById('displayUsername');
-const logoutBtn = document.getElementById('logoutBtn');
+const loginUsername = $('loginUsername');
+const loginPassword = $('loginPassword');
+const loginBtn = $('loginBtn');
 
-const searchInput = document.getElementById('searchInput');
-const searchBtn = document.getElementById('searchBtn');
-const searchResults = document.getElementById('searchResults');
-const chatsContainer = document.getElementById('chatsContainer');
+const userAvatarSmall = $('userAvatarSmall');
+const displayName = $('displayName');
+const displayUsername = $('displayUsername');
+const logoutBtn = $('logoutBtn');
 
-const backToMainBtn = document.getElementById('backToMainBtn');
-const chatPartnerName = document.getElementById('chatPartnerName');
-const chatPartnerStatus = document.getElementById('chatPartnerStatus');
-const chatAvatar = document.getElementById('chatAvatar');
-const messagesDiv = document.getElementById('messages');
-const messageInput = document.getElementById('messageInput');
-const sendBtn = document.getElementById('sendBtn');
-const emojiBtn = document.getElementById('emojiBtn');
-const emojiPicker = document.getElementById('emojiPicker');
-const imageBtn = document.getElementById('imageBtn');
-const imageInput = document.getElementById('imageInput');
-const replyPreview = document.getElementById('replyPreview');
-const replyText = document.getElementById('replyText');
-const cancelReplyBtn = document.getElementById('cancelReplyBtn');
-const clearChatBtn = document.getElementById('clearChatBtn');
+const searchInput = $('searchInput');
+const searchBtn = $('searchBtn');
+const searchResults = $('searchResults');
+const chatsContainer = $('chatsContainer');
+
+const backToMainBtn = $('backToMainBtn');
+const chatPartnerName = $('chatPartnerName');
+const chatPartnerStatus = $('chatPartnerStatus');
+const chatAvatar = $('chatAvatar');
+const messagesDiv = $('messages');
+const messageInput = $('messageInput');
+const sendBtn = $('sendBtn');
+const emojiBtn = $('emojiBtn');
+const emojiPicker = $('emojiPicker');
+const imageBtn = $('imageBtn');
+const imageInput = $('imageInput');
+const replyPreview = $('replyPreview');
+const replyText = $('replyText');
+const cancelReplyBtn = $('cancelReplyBtn');
+const clearChatBtn = $('clearChatBtn');
 
 // ===== دوال مساعدة =====
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-}
-
-function getCurrentTime() {
-    const now = new Date();
-    return now.getHours().toString().padStart(2, '0') + ':' + 
-           now.getMinutes().toString().padStart(2, '0');
-}
-
-function getFullTime() {
-    return new Date().toISOString();
-}
-
+function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 5); }
+function getCurrentTime() { const d = new Date(); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
 function getLastSeen(user) {
     if (!user || !user.lastSeen) return 'غير معروف';
-    const now = new Date();
-    const last = new Date(user.lastSeen);
-    const diff = Math.floor((now - last) / 1000);
+    const diff = Math.floor((new Date() - new Date(user.lastSeen)) / 1000);
     if (diff < 60) return 'منذ لحظات';
-    if (diff < 3600) return `منذ ${Math.floor(diff / 60)} دقيقة`;
-    if (diff < 86400) return `منذ ${Math.floor(diff / 3600)} ساعة`;
-    return `منذ ${Math.floor(diff / 86400)} يوم`;
+    if (diff < 3600) return `منذ ${Math.floor(diff/60)} دقيقة`;
+    if (diff < 86400) return `منذ ${Math.floor(diff/3600)} ساعة`;
+    return `منذ ${Math.floor(diff/86400)} يوم`;
 }
 
-// ===== حفظ المحادثات محلياً =====
-function saveChats() {
-    const chats = {};
-    for (const [key, value] of Object.entries(localMessages)) {
-        if (value && value.length > 0) {
-            const ids = key.split('_');
-            const partnerId = ids[0] === currentUser?.id ? ids[1] : ids[0];
-            chats[key] = {
-                partnerId: partnerId,
-                lastMessage: value[value.length - 1],
-                count: value.length
-            };
-        }
-    }
-    localStorage.setItem('fbchat_chats', JSON.stringify(chats));
-}
-
-function loadChats() {
-    const stored = localStorage.getItem('fbchat_chats');
-    if (stored) {
-        return JSON.parse(stored);
-    }
-    return {};
-}
-
-function addChat(partnerId) {
-    if (!currentUser) return;
-    const chatId = getChatId(currentUser.id, partnerId);
-    const chats = loadChats();
-    if (!chats[chatId]) {
-        chats[chatId] = {
-            partnerId: partnerId,
-            lastMessage: null,
-            count: 0
-        };
-        localStorage.setItem('fbchat_chats', JSON.stringify(chats));
-    }
-}
-
-// ===== ✅ دوال تليجرام لتخزين المستخدمين =====
-
-// حفظ مستخدم جديد في تليجرام
+// ===== دوال تليجرام =====
 async function saveUserToTelegram(user) {
-    const message = `🆕 مستخدم جديد!\n\n👤 الاسم: ${user.name}\n🔑 اليوزرنيم: @${user.username}\n🆔 المعرف: ${user.id}\n🌍 الدولة: ${user.country || 'غير معروف'}\n📅 الوقت: ${new Date().toLocaleString('ar-EG')}`;
-    
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-    try {
-        await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: CHAT_ID,
-                text: message,
-                parse_mode: 'HTML'
-            })
-        });
-        console.log('✅ تم حفظ المستخدم في تليجرام');
-    } catch (error) {
-        console.error('خطأ في حفظ المستخدم:', error);
-    }
+    const msg = `🆕 مستخدم جديد!\n👤 ${user.name}\n🔑 @${user.username}\n🆔 ${user.id}`;
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: CHAT_ID, text: msg })
+    }).catch(e => console.log('خطأ في حفظ المستخدم:', e));
 }
 
-// جلب كل المستخدمين من تليجرام
-async function fetchAllUsersFromTelegram() {
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`;
-    
+async function getTelegramUsers() {
     try {
-        const response = await fetch(url);
-        const data = await response.json();
-        if (!data.ok) {
-            console.log('❌ خطأ في جلب المستخدمين');
-            return [];
-        }
-        
-        const users = [];
-        const uniqueIds = new Set();
-        
-        for (const update of data.result) {
-            if (update.message && update.message.text) {
-                const text = update.message.text;
-                // البحث عن رسائل تسجيل المستخدمين الجدد
-                if (text.includes('🆕 مستخدم جديد!')) {
-                    const lines = text.split('\n');
-                    let name = '', username = '', id = '';
-                    for (const line of lines) {
-                        if (line.includes('👤 الاسم:')) {
-                            name = line.replace('👤 الاسم:', '').trim();
-                        }
-                        if (line.includes('🔑 اليوزرنيم:')) {
-                            username = line.replace('🔑 اليوزرنيم:', '').trim().replace('@', '');
-                        }
-                        if (line.includes('🆔 المعرف:')) {
-                            id = line.replace('🆔 المعرف:', '').trim();
-                        }
-                    }
-                    if (name && username && id && !uniqueIds.has(id)) {
-                        uniqueIds.add(id);
-                        // البحث عن المستخدم في localStorage عشان نجيب الصورة
-                        const localUser = allUsers.find(u => u.id === id);
-                        users.push({
-                            id: id,
-                            name: name,
-                            username: username,
-                            avatar: localUser?.avatar || '',
-                            online: false,
-                            lastSeen: new Date().toISOString()
-                        });
-                    }
-                }
-            }
-        }
-        
-        console.log(`📋 تم جلب ${users.length} مستخدم من تليجرام`);
-        return users;
-    } catch (error) {
-        console.error('خطأ في جلب المستخدمين:', error);
-        return [];
-    }
-}
-
-// ===== دوال تليجرام الأساسية =====
-async function notifyNewUser(user) {
-    const message = `🆕 مستخدم جديد سجل في FB Chat!\n\n👤 الاسم: ${user.name}\n🔑 اليوزرنيم: @${user.username}\n🆔 المعرف: ${user.id}\n📅 الوقت: ${new Date().toLocaleString('ar-EG')}`;
-    
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-    try {
-        await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: CHAT_ID,
-                text: message,
-                parse_mode: 'HTML'
-            })
-        });
-    } catch (error) {
-        console.error('خطأ في إرسال إشعار المستخدم:', error);
-    }
-}
-
-async function saveMessageToTelegram(chatId, senderId, senderName, receiverId, msgText, msgType = 'text', replyTo = null, forwardedFrom = null) {
-    let fullText = `[CHAT_${chatId}] ${senderName} (${senderId}) ➜ ${receiverId}: `;
-    
-    if (replyTo) {
-        fullText += `[رد على: "${replyTo}"] `;
-    }
-    if (forwardedFrom) {
-        fullText += `[معاد توجيهه من ${forwardedFrom}] `;
-    }
-    
-    fullText += msgText;
-    
-    if (msgType === 'image') {
-        fullText = `[CHAT_${chatId}] ${senderName} (${senderId}) ➜ ${receiverId}: 📷 [صورة]`;
-    }
-    
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: CHAT_ID,
-                text: fullText,
-                parse_mode: 'HTML'
-            })
-        });
-        return await response.json();
-    } catch (error) {
-        console.error('خطأ في الإرسال:', error);
-        return false;
-    }
-}
-
-async function deleteMessageFromTelegram(chatId, messageId) {
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-    try {
-        await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: CHAT_ID,
-                text: `[CHAT_${chatId}] [تم حذف رسالة]`,
-                parse_mode: 'HTML'
-            })
-        });
-        return true;
-    } catch (error) {
-        console.error('خطأ في حذف الرسالة:', error);
-        return false;
-    }
-}
-
-async function fetchMessagesFromTelegram(chatId) {
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`;
-
-    try {
-        const response = await fetch(url);
-        const data = await response.json();
+        const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`);
+        const data = await res.json();
         if (!data.ok) return [];
-
-        const messages = [];
+        const users = [];
+        const seen = new Set();
         for (const update of data.result) {
-            if (update.message && update.message.text) {
-                const text = update.message.text;
-                if (text.startsWith(`[CHAT_${chatId}]`)) {
-                    const content = text.substring(text.indexOf(']') + 1).trim();
-                    messages.push({
-                        id: update.update_id,
-                        content: content,
-                        timestamp: update.message.date
-                    });
+            if (update.message?.text?.includes('🆕 مستخدم جديد!')) {
+                const lines = update.message.text.split('\n');
+                let name = '', username = '', id = '';
+                for (const line of lines) {
+                    if (line.includes('👤')) name = line.replace('👤', '').trim();
+                    if (line.includes('🔑')) username = line.replace('🔑', '').trim().replace('@', '');
+                    if (line.includes('🆔')) id = line.replace('🆔', '').trim();
+                }
+                if (name && username && id && !seen.has(id)) {
+                    seen.add(id);
+                    users.push({ id, name, username, avatar: '', online: false, lastSeen: new Date().toISOString() });
                 }
             }
         }
-        return messages;
-    } catch (error) {
-        console.error('خطأ في الجلب:', error);
-        return [];
-    }
+        return users;
+    } catch(e) { return []; }
+}
+
+async function saveMsg(chatId, senderId, senderName, receiverId, text) {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: CHAT_ID, text: `[${chatId}] ${senderName}: ${text}` })
+    }).catch(e => console.log('خطأ في حفظ الرسالة:', e));
+}
+
+async function getMsgs(chatId) {
+    try {
+        const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`);
+        const data = await res.json();
+        if (!data.ok) return [];
+        const msgs = [];
+        for (const update of data.result) {
+            if (update.message?.text?.startsWith(`[${chatId}]`)) {
+                msgs.push({ id: update.update_id, content: update.message.text, timestamp: update.message.date });
+            }
+        }
+        return msgs;
+    } catch(e) { return []; }
 }
 
 // ===== إدارة المستخدمين =====
 function loadUsers() {
     const stored = localStorage.getItem('fbchat_users');
-    if (stored) {
-        allUsers = JSON.parse(stored);
-        if (currentUser) {
-            allUsers.forEach(u => {
-                if (u.id !== currentUser.id) {
-                    u.online = false;
-                }
-            });
-            saveUsers();
-        }
+    if (stored) { 
+        allUsers = JSON.parse(stored); 
     } else {
-        // مستخدمين تجريبيين للبداية
-        allUsers = [
-            { 
-                id: 'demo1_' + Date.now(), 
-                name: 'أحمد محمد', 
-                username: 'ahmed_123', 
-                password: '1234', 
-                avatar: '', 
-                online: true,
-                lastSeen: new Date().toISOString(),
-                createdAt: new Date().toISOString()
-            },
-            { 
-                id: 'demo2_' + Date.now(), 
-                name: 'سارة علي', 
-                username: 'sara_456', 
-                password: '1234', 
-                avatar: '', 
-                online: true,
-                lastSeen: new Date().toISOString(),
-                createdAt: new Date().toISOString()
-            }
-        ];
+        // 🆕 مافيش مستخدمين تجريبيين - الكل يسجل من الصفر
+        allUsers = [];
         saveUsers();
     }
 }
+function saveUsers() { localStorage.setItem('fbchat_users', JSON.stringify(allUsers)); }
+function findUser(u) { return allUsers.find(x => x.username?.toLowerCase() === u?.toLowerCase()); }
+function findById(id) { return allUsers.find(x => x.id === id); }
 
-function saveUsers() {
-    localStorage.setItem('fbchat_users', JSON.stringify(allUsers));
-}
-
-function findUserByUsername(username) {
-    return allUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
-}
-
-function findUserById(id) {
-    return allUsers.find(u => u.id === id);
-}
-
-// ===== حفظ محلي للرسائل =====
-function saveLocalMessages(chatId, messages) {
-    localMessages[chatId] = messages;
-    localStorage.setItem('fbchat_local_messages', JSON.stringify(localMessages));
-}
-
-function loadLocalMessages(chatId) {
-    const stored = localStorage.getItem('fbchat_local_messages');
-    if (stored) {
-        localMessages = JSON.parse(stored);
-        return localMessages[chatId] || [];
-    }
+function saveLocal(chatId, msgs) { localMessages[chatId] = msgs; localStorage.setItem('fbchat_msgs', JSON.stringify(localMessages)); }
+function loadLocal(chatId) {
+    const stored = localStorage.getItem('fbchat_msgs');
+    if (stored) { localMessages = JSON.parse(stored); return localMessages[chatId] || []; }
     return [];
 }
 
-// ===== عدد غير مقروء =====
-function saveUnreadCounts() {
-    localStorage.setItem('fbchat_unread', JSON.stringify(unreadCounts));
-}
-
-function loadUnreadCounts() {
-    const stored = localStorage.getItem('fbchat_unread');
-    if (stored) {
-        unreadCounts = JSON.parse(stored);
+function saveChats() {
+    const chats = {};
+    for (const [key, val] of Object.entries(localMessages)) {
+        if (val?.length) {
+            const ids = key.split('_');
+            const pid = ids[0] === currentUser?.id ? ids[1] : ids[0];
+            chats[key] = { partnerId: pid, lastMessage: val[val.length-1] };
+        }
     }
+    localStorage.setItem('fbchat_chats', JSON.stringify(chats));
+}
+function loadChats() { return JSON.parse(localStorage.getItem('fbchat_chats') || '{}'); }
+function addChat(pid) {
+    if (!currentUser) return;
+    const id = [currentUser.id, pid].sort().join('_');
+    const chats = loadChats();
+    if (!chats[id]) { chats[id] = { partnerId: pid }; localStorage.setItem('fbchat_chats', JSON.stringify(chats)); }
 }
 
-// ===== دوال الواجهة =====
-togglePassword.addEventListener('click', () => {
+function getChatId(u1, u2) { return [u1, u2].sort().join('_'); }
+
+// ===== التنقل بين الشاشات =====
+function showLoginScreen() {
+    loginScreen.style.display = 'block';
+    loginExistingScreen.style.display = 'none';
+    registerScreen.style.display = 'none';
+    mainScreen.style.display = 'none';
+    chatScreen.style.display = 'none';
+}
+
+function showLoginExistingScreen() {
+    loginScreen.style.display = 'none';
+    loginExistingScreen.style.display = 'block';
+    registerScreen.style.display = 'none';
+    mainScreen.style.display = 'none';
+    chatScreen.style.display = 'none';
+}
+
+function showRegisterScreen() {
+    loginScreen.style.display = 'none';
+    loginExistingScreen.style.display = 'none';
+    registerScreen.style.display = 'block';
+    mainScreen.style.display = 'none';
+    chatScreen.style.display = 'none';
+}
+
+// ===== أحداث الأزرار الرئيسية =====
+goToLoginBtn.addEventListener('click', showLoginExistingScreen);
+goToRegisterBtn.addEventListener('click', showRegisterScreen);
+backToMainLoginBtn.addEventListener('click', showLoginScreen);
+backToMainLoginBtn2.addEventListener('click', showLoginScreen);
+
+// ===== إظهار/إخفاء كلمة المرور =====
+togglePassword?.addEventListener('click', () => {
     const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
     passwordInput.setAttribute('type', type);
     togglePassword.className = type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
 });
 
-goToLoginBtn.addEventListener('click', () => {
-    loginScreen.style.display = 'none';
-    loginExistingScreen.style.display = 'block';
-});
-
-async function registerUser() {
+// ===== تسجيل مستخدم جديد =====
+registerBtn.addEventListener('click', async () => {
     const name = fullNameInput.value.trim();
     const username = usernameInput.value.trim();
     const password = passwordInput.value.trim();
-
-    if (!name || !username || !password) {
-        alert('⚠️ الرجاء ملء جميع الحقول');
-        return;
+    if (!name || !username || !password) return alert('⚠️ ملء جميع الحقول');
+    if (password.length < 4) return alert('⚠️ الباسورد 4 أحرف على الأقل');
+    
+    // التحقق من تليجرام
+    const teleUsers = await getTelegramUsers();
+    if (teleUsers.find(u => u.username?.toLowerCase() === username.toLowerCase())) {
+        return alert('⚠️ هذا اليوزرنيم مستخدم بالفعل!');
     }
-
-    if (password.length < 4) {
-        alert('⚠️ كلمة المرور يجب أن تكون 4 أحرف على الأقل');
-        return;
-    }
-
-    // ✅ التحقق من تليجرام (السيرفر المركزي)
-    const allUsersFromTelegram = await fetchAllUsersFromTelegram();
-    const existingUser = allUsersFromTelegram.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (existingUser) {
-        alert('⚠️ هذا اليوزرنيم مستخدم بالفعل!');
-        return;
-    }
-
-    let avatar = '';
-    const avatarImg = avatarPreview.querySelector('img');
-    if (avatarImg) {
-        avatar = avatarImg.src;
-    }
-
-    const newUser = {
-        id: generateId(),
-        name: name,
-        username: username,
-        password: password,
-        avatar: avatar,
-        online: true,
+    
+    const avatar = avatarPreview.querySelector('img')?.src || '';
+    const newUser = { 
+        id: generateId(), 
+        name, 
+        username, 
+        password, 
+        avatar, 
+        online: true, 
         lastSeen: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        country: 'مصر' // يمكن إضافة API لتحديد الدولة
+        createdAt: new Date().toISOString()
     };
-
-    // حفظ محلياً
     allUsers.push(newUser);
     saveUsers();
     currentUser = newUser;
     localStorage.setItem('fbchat_current_user', JSON.stringify(currentUser));
-
-    // ✅ حفظ في تليجرام (السيرفر المركزي)
     await saveUserToTelegram(newUser);
-    await notifyNewUser(newUser);
-
     showMainScreen();
-}
+});
 
-function loginUser() {
+// ===== تسجيل الدخول =====
+loginBtn.addEventListener('click', () => {
     const username = loginUsername.value.trim();
     const password = loginPassword.value.trim();
-
-    if (!username || !password) {
-        alert('⚠️ الرجاء إدخال اليوزرنيم وكلمة المرور');
-        return;
-    }
-
-    const user = findUserByUsername(username);
-    if (!user) {
-        alert('⚠️ المستخدم غير موجود');
-        return;
-    }
-
-    if (user.password !== password) {
-        alert('⚠️ كلمة المرور غير صحيحة');
-        return;
-    }
-
+    if (!username || !password) return alert('⚠️ ادخل اليوزرنيم والباسورد');
+    const user = findUser(username);
+    if (!user) return alert('⚠️ المستغير غير موجود - تأكد من اليوزرنيم');
+    if (user.password !== password) return alert('⚠️ كلمة المرور غير صحيحة');
     currentUser = user;
     currentUser.online = true;
     currentUser.lastSeen = new Date().toISOString();
     saveUsers();
     localStorage.setItem('fbchat_current_user', JSON.stringify(currentUser));
     showMainScreen();
-}
-
-function showMainScreen() {
-    loginScreen.style.display = 'none';
-    loginExistingScreen.style.display = 'none';
-    mainScreen.style.display = 'flex';
-    chatScreen.style.display = 'none';
-
-    if (currentUser.avatar) {
-        userAvatarSmall.innerHTML = `<img src="${currentUser.avatar}" alt="avatar" />`;
-    } else {
-        userAvatarSmall.innerHTML = `<i class="fas fa-user"></i>`;
-    }
-    displayName.textContent = currentUser.name;
-    displayUsername.textContent = '@' + currentUser.username;
-
-    renderChats();
-}
-
-function showChatScreen(partner) {
-    currentChatPartner = partner;
-    mainScreen.style.display = 'none';
-    chatScreen.style.display = 'flex';
-
-    chatPartnerName.textContent = partner.name;
-    updatePartnerStatus();
-    
-    if (partner.avatar) {
-        chatAvatar.innerHTML = `<img src="${partner.avatar}" alt="avatar" />`;
-    } else {
-        chatAvatar.innerHTML = `<i class="fas fa-user"></i>`;
-    }
-
-    addChat(partner.id);
-
-    replyToMessage = null;
-    replyPreview.style.display = 'none';
-    
-    loadChatMessages();
-}
-
-function updatePartnerStatus() {
-    if (!currentChatPartner) return;
-    if (currentChatPartner.online) {
-        chatPartnerStatus.textContent = '🟢 متصل الآن';
-        chatPartnerStatus.style.color = '#31a24c';
-    } else {
-        chatPartnerStatus.textContent = `🔴 آخر ظهور ${getLastSeen(currentChatPartner)}`;
-        chatPartnerStatus.style.color = '#65676b';
-    }
-}
-
-function displayMessage(text, isMine = false, time = null, msgId = null, replyTextContent = null, isDeleted = false, imageSrc = null, forwardedFrom = null) {
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `message ${isMine ? 'me' : ''}`;
-    msgDiv.dataset.msgId = msgId || generateId();
-    
-    let content = '';
-    
-    if (replyTextContent) {
-        content += `<div class="message-reply">↩️ ${replyTextContent}</div>`;
-    }
-    
-    if (forwardedFrom) {
-        content += `<div style="font-size:11px; opacity:0.6; margin-bottom:4px;">📎 معاد توجيهه من ${forwardedFrom}</div>`;
-    }
-    
-    if (isDeleted) {
-        content += `<span class="message-deleted">🗑️ تم حذف هذه الرسالة</span>`;
-    } else if (imageSrc) {
-        content += `<img src="${imageSrc}" class="message-image" />`;
-    } else {
-        content += text;
-    }
-    
-    content += `<span class="message-time">${time || getCurrentTime()}</span>`;
-    
-    if (!isDeleted) {
-        content += `
-            <div class="message-actions">
-                <button class="reply-btn" title="رد" onclick="window.replyToMessageFunc('${msgDiv.dataset.msgId}')">↩️</button>
-                <button class="forward-btn" title="إعادة توجيه" onclick="window.forwardMessageFunc('${msgDiv.dataset.msgId}')">➡️</button>
-                ${isMine ? `<button class="delete-btn" title="حذف" onclick="window.deleteMessageFunc('${msgDiv.dataset.msgId}')">🗑️</button>` : ''}
-            </div>
-        `;
-    }
-    
-    msgDiv.innerHTML = content;
-    messagesDiv.appendChild(msgDiv);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    return msgDiv.dataset.msgId;
-}
-
-// دوال الإجراءات
-window.replyToMessageFunc = function(msgId) {
-    const msgElement = document.querySelector(`[data-msg-id="${msgId}"]`);
-    if (!msgElement) return;
-    const text = msgElement.textContent.replace(/\d{1,2}:\d{2}/g, '').trim();
-    replyToMessage = { id: msgId, text: text };
-    replyText.textContent = text.substring(0, 50) + (text.length > 50 ? '...' : '');
-    replyPreview.style.display = 'block';
-    messageInput.focus();
-};
-
-window.forwardMessageFunc = function(msgId) {
-    const msgElement = document.querySelector(`[data-msg-id="${msgId}"]`);
-    if (!msgElement) return;
-    const text = msgElement.textContent.replace(/\d{1,2}:\d{2}/g, '').trim();
-    if (confirm(`إعادة توجيه هذه الرسالة؟\n\n"${text}"`)) {
-        forwardMessage = { id: msgId, text: text };
-        messageInput.value = `📎 [معاد توجيهه] ${text}`;
-        messageInput.focus();
-    }
-};
-
-window.deleteMessageFunc = async function(msgId) {
-    if (!confirm('هل تريد حذف هذه الرسالة؟')) return;
-    const msgElement = document.querySelector(`[data-msg-id="${msgId}"]`);
-    if (!msgElement) return;
-    const chatId = getChatId(currentUser.id, currentChatPartner.id);
-    await deleteMessageFromTelegram(chatId, msgId);
-    msgElement.innerHTML = `
-        <span class="message-deleted">🗑️ تم حذف هذه الرسالة</span>
-        <span class="message-time">${getCurrentTime()}</span>
-    `;
-    const localMsgs = loadLocalMessages(chatId);
-    const updated = localMsgs.map(m => {
-        if (m.id === msgId) {
-            return { ...m, deleted: true };
-        }
-        return m;
-    });
-    saveLocalMessages(chatId, updated);
-};
-
-cancelReplyBtn.addEventListener('click', () => {
-    replyToMessage = null;
-    replyPreview.style.display = 'none';
 });
 
-async function loadChatMessages() {
-    const chatId = getChatId(currentUser.id, currentChatPartner.id);
-    messagesDiv.innerHTML = '';
+// ===== الضغط على Enter في حقول التسجيل =====
+fullNameInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') usernameInput.focus(); });
+usernameInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') passwordInput.focus(); });
+passwordInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') registerBtn.click(); });
 
-    const localMsgs = loadLocalMessages(chatId);
-    if (localMsgs.length > 0) {
-        const recent = localMsgs.slice(-10);
-        for (const msg of recent) {
-            displayMessage(
-                msg.text || '',
-                msg.senderId === currentUser.id,
-                msg.time,
-                msg.id,
-                msg.replyTo,
-                msg.deleted || false,
-                msg.image || null,
-                msg.forwardedFrom || null
-            );
-        }
-    }
+loginUsername?.addEventListener('keypress', (e) => { if (e.key === 'Enter') loginPassword.focus(); });
+loginPassword?.addEventListener('keypress', (e) => { if (e.key === 'Enter') loginBtn.click(); });
 
-    const messages = await fetchMessagesFromTelegram(chatId);
-    const newMessages = [];
-    
-    for (const msg of messages) {
-        const content = msg.content;
-        const isMine = content.includes(currentUser.id);
-        const cleanText = content.split(': ').pop() || content;
-        
-        const exists = localMsgs.some(m => m.id === msg.id.toString());
-        if (!exists) {
-            newMessages.push({
-                id: msg.id.toString(),
-                text: cleanText,
-                senderId: isMine ? currentUser.id : currentChatPartner.id,
-                time: new Date(msg.timestamp * 1000).toHoursMinutes(),
-                deleted: false
-            });
-        }
-    }
-    
-    if (newMessages.length > 0) {
-        for (const msg of newMessages) {
-            const isMine = msg.senderId === currentUser.id;
-            displayMessage(msg.text, isMine, msg.time, msg.id);
-        }
-        const allMsgs = [...localMsgs, ...newMessages];
-        saveLocalMessages(chatId, allMsgs);
-    }
-
-    addChat(currentChatPartner.id);
-    saveChats();
-
-    if (unreadCounts[chatId]) {
-        unreadCounts[chatId] = 0;
-        saveUnreadCounts();
-        renderChats();
-    }
-
-    if (messageInterval) clearInterval(messageInterval);
-    let lastCount = messages.length;
-    messageInterval = setInterval(async () => {
-        if (currentChatPartner) {
-            const newMessages = await fetchMessagesFromTelegram(chatId);
-            if (newMessages.length > lastCount) {
-                const latestMsgs = newMessages.slice(lastCount);
-                for (const msg of latestMsgs) {
-                    const content = msg.content;
-                    const isMine = content.includes(currentUser.id);
-                    const cleanText = content.split(': ').pop() || content;
-                    
-                    const localMsgs2 = loadLocalMessages(chatId);
-                    const newMsg = {
-                        id: msg.id.toString(),
-                        text: cleanText,
-                        senderId: isMine ? currentUser.id : currentChatPartner.id,
-                        time: new Date(msg.timestamp * 1000).toHoursMinutes(),
-                        deleted: false
-                    };
-                    localMsgs2.push(newMsg);
-                    saveLocalMessages(chatId, localMsgs2);
-                    
-                    displayMessage(cleanText, isMine, newMsg.time, newMsg.id);
-                    
-                    if (!isMine && chatScreen.style.display !== 'none') {
-                        unreadCounts[chatId] = (unreadCounts[chatId] || 0) + 1;
-                        saveUnreadCounts();
-                        renderChats();
-                    }
-                }
-                lastCount = newMessages.length;
-                addChat(currentChatPartner.id);
-                saveChats();
-                renderChats();
-            }
-        }
-    }, 3000);
-}
-
-function getChatId(user1, user2) {
-    return [user1, user2].sort().join('_');
-}
-
-function renderChats() {
-    chatsContainer.innerHTML = '';
-    
-    const savedChats = loadChats();
-    const chatEntries = Object.entries(savedChats);
-    
-    if (chatEntries.length === 0) {
-        chatsContainer.innerHTML = `
-            <div class="empty-chats">
-                <i class="fas fa-comment-dots"></i>
-                <p>لا توجد محادثات بعد</p>
-                <span>ابحث عن أصدقائك وابدأ الدردشة</span>
-            </div>
-        `;
-        return;
-    }
-    
-    chatEntries.sort((a, b) => {
-        const timeA = a[1].lastMessage?.time || '00:00';
-        const timeB = b[1].lastMessage?.time || '00:00';
-        return timeB.localeCompare(timeA);
-    });
-    
-    for (const [chatId, chatData] of chatEntries) {
-        const partner = findUserById(chatData.partnerId);
-        if (!partner) continue;
-        
-        const div = document.createElement('div');
-        div.className = 'chat-item';
-        
-        const localMsgs = loadLocalMessages(chatId);
-        const lastMsg = localMsgs.length > 0 ? localMsgs[localMsgs.length - 1] : null;
-        const unread = unreadCounts[chatId] || 0;
-        
-        div.innerHTML = `
-            <div class="chat-avatar-small">
-                ${partner.avatar ? `<img src="${partner.avatar}" />` : `<i class="fas fa-user"></i>`}
-                ${partner.online ? '<div style="width:10px;height:10px;background:#31a24c;border-radius:50%;position:absolute;bottom:0;right:0;border:2px solid #fff;"></div>' : ''}
-            </div>
-            <div class="chat-item-info">
-                <div class="chat-item-name">${partner.name}</div>
-                <div class="chat-item-last">${lastMsg ? (lastMsg.text || '📷 صورة') : 'ابدأ المحادثة'}</div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                <div class="chat-item-time">${lastMsg ? lastMsg.time : ''}</div>
-                ${unread > 0 ? `<span class="unread-badge">${unread}</span>` : ''}
-            </div>
-        `;
-        
-        div.addEventListener('click', () => {
-            const chatId2 = getChatId(currentUser.id, partner.id);
-            unreadCounts[chatId2] = 0;
-            saveUnreadCounts();
-            showChatScreen(partner);
-        });
-        chatsContainer.appendChild(div);
-    }
-}
-
-// ===== ✅ البحث عن المستخدمين (جلب من تليجرام) =====
-async function searchUsersGlobal(query) {
-    if (!query || query.length < 2) return [];
-    
-    // جلب كل المستخدمين من تليجرام
-    const telegramUsers = await fetchAllUsersFromTelegram();
-    
-    // دمج مع المستخدمين المحليين
-    const allUsersList = [...allUsers, ...telegramUsers];
-    
-    // إزالة التكرار
-    const uniqueUsers = [];
-    const seenIds = new Set();
-    for (const user of allUsersList) {
-        if (!seenIds.has(user.id)) {
-            seenIds.add(user.id);
-            uniqueUsers.push(user);
-        }
-    }
-    
-    const searchQuery = query.toLowerCase().trim();
-    const results = uniqueUsers.filter(u => {
-        if (u.id === currentUser.id) return false;
-        const username = (u.username || '').toLowerCase();
-        const name = (u.name || '').toLowerCase();
-        return username.includes(searchQuery) || name.includes(searchQuery);
-    });
-    
-    console.log(`🔍 تم العثور على ${results.length} نتيجة للبحث عن "${query}"`);
-    return results;
-}
-
-function showSearchResults(results) {
-    searchResults.innerHTML = '';
-    searchResults.style.display = 'none';
-    
-    if (!results || results.length === 0) {
-        searchResults.style.display = 'block';
-        searchResults.innerHTML = `
-            <div style="padding:12px 16px; color:#65676b; text-align:center;">
-                <i class="fas fa-search"></i> لا توجد نتائج لبحثك
-            </div>
-        `;
-        return;
-    }
-
-    searchResults.style.display = 'block';
-    
-    for (const user of results) {
-        const div = document.createElement('div');
-        div.className = 'search-result-item';
-        div.innerHTML = `
-            <div class="avatar-result">
-                ${user.avatar ? `<img src="${user.avatar}" />` : `<i class="fas fa-user"></i>`}
-            </div>
-            <div class="result-info">
-                <div class="result-name">${user.name}</div>
-                <div class="result-username">@${user.username}</div>
-                ${user.online ? '<div style="font-size:11px;color:#31a24c;">🟢 متصل</div>' : `<div style="font-size:11px;color:#65676b;">${getLastSeen(user)}</div>`}
-            </div>
-            <i class="fas fa-comment" style="color:#0084ff;"></i>
-        `;
-        div.addEventListener('click', () => {
-            searchResults.style.display = 'none';
-            searchInput.value = '';
-            
-            // التأكد من وجود المستخدم في القائمة المحلية
-            let existingUser = findUserById(user.id);
-            if (!existingUser) {
-                // إضافة المستخدم من تليجرام إلى القائمة المحلية
-                existingUser = {
-                    id: user.id,
-                    name: user.name,
-                    username: user.username,
-                    avatar: user.avatar || '',
-                    online: false,
-                    lastSeen: new Date().toISOString()
-                };
-                allUsers.push(existingUser);
-                saveUsers();
-            }
-            
-            showChatScreen(existingUser);
-        });
-        searchResults.appendChild(div);
-    }
-}
-
-// ===== الأحداث =====
-avatarInput.addEventListener('change', (e) => {
+// ===== رفع الصورة =====
+avatarInput?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
         const reader = new FileReader();
@@ -881,36 +288,274 @@ avatarInput.addEventListener('change', (e) => {
     }
 });
 
-registerBtn.addEventListener('click', registerUser);
-loginBtn.addEventListener('click', loginUser);
-
-goToRegisterBtn.addEventListener('click', () => {
+// ===== عرض الشاشة الرئيسية =====
+function showMainScreen() {
+    loginScreen.style.display = 'none';
     loginExistingScreen.style.display = 'none';
-    loginScreen.style.display = 'block';
+    registerScreen.style.display = 'none';
+    mainScreen.style.display = 'flex';
+    chatScreen.style.display = 'none';
+    
+    userAvatarSmall.innerHTML = currentUser.avatar ? `<img src="${currentUser.avatar}" />` : `<i class="fas fa-user"></i>`;
+    displayName.textContent = currentUser.name;
+    displayUsername.textContent = '@' + currentUser.username;
+    renderChats();
+}
+
+// ===== عرض شاشة الشات =====
+function showChatScreen(partner) {
+    currentChatPartner = partner;
+    mainScreen.style.display = 'none';
+    chatScreen.style.display = 'flex';
+    chatPartnerName.textContent = partner.name;
+    chatPartnerStatus.textContent = partner.online ? '🟢 متصل' : '🔴 غير متصل';
+    chatAvatar.innerHTML = partner.avatar ? `<img src="${partner.avatar}" />` : `<i class="fas fa-user"></i>`;
+    addChat(partner.id);
+    replyToMessage = null;
+    replyPreview.style.display = 'none';
+    loadMessages();
+}
+
+// ===== عرض الرسائل =====
+function displayMessage(text, isMine, time, id, reply, deleted, img, forwarded) {
+    const div = document.createElement('div');
+    div.className = `message ${isMine ? 'me' : ''}`;
+    div.dataset.msgId = id || generateId();
+    let html = '';
+    if (reply) html += `<div class="message-reply">↩️ ${reply}</div>`;
+    if (forwarded) html += `<div style="font-size:11px;opacity:0.6;">📎 من ${forwarded}</div>`;
+    if (deleted) html += `<span class="message-deleted">🗑️ تم الحذف</span>`;
+    else if (img) html += `<img src="${img}" class="message-image" />`;
+    else html += text;
+    html += `<span class="message-time">${time || getCurrentTime()}</span>`;
+    if (!deleted) {
+        html += `<div class="message-actions">
+            <button class="reply-btn" onclick="replyMsg('${div.dataset.msgId}')">↩️</button>
+            <button class="forward-btn" onclick="forwardMsg('${div.dataset.msgId}')">➡️</button>
+            ${isMine ? `<button class="delete-btn" onclick="delMsg('${div.dataset.msgId}')">🗑️</button>` : ''}
+        </div>`;
+    }
+    div.innerHTML = html;
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    return div.dataset.msgId;
+}
+
+// ===== دوال الإجراءات (Reply, Forward, Delete) =====
+window.replyMsg = function(id) {
+    const el = document.querySelector(`[data-msg-id="${id}"]`);
+    if (!el) return;
+    const text = el.textContent.replace(/\d{1,2}:\d{2}/g, '').trim();
+    replyToMessage = { id, text };
+    replyText.textContent = text.substring(0, 50) + (text.length > 50 ? '...' : '');
+    replyPreview.style.display = 'block';
+    messageInput.focus();
+};
+
+window.forwardMsg = function(id) {
+    const el = document.querySelector(`[data-msg-id="${id}"]`);
+    if (!el) return;
+    const text = el.textContent.replace(/\d{1,2}:\d{2}/g, '').trim();
+    if (confirm(`إعادة توجيه هذه الرسالة؟\n"${text}"`)) {
+        messageInput.value = `📎 ${text}`;
+        messageInput.focus();
+    }
+};
+
+window.delMsg = async function(id) {
+    if (!confirm('هل تريد حذف هذه الرسالة؟')) return;
+    const el = document.querySelector(`[data-msg-id="${id}"]`);
+    if (!el) return;
+    const chatId = getChatId(currentUser.id, currentChatPartner.id);
+    el.innerHTML = `<span class="message-deleted">🗑️ تم الحذف</span><span class="message-time">${getCurrentTime()}</span>`;
+    const msgs = loadLocal(chatId);
+    const updated = msgs.map(m => m.id === id ? { ...m, deleted: true } : m);
+    saveLocal(chatId, updated);
+};
+
+cancelReplyBtn?.addEventListener('click', () => {
+    replyToMessage = null;
+    replyPreview.style.display = 'none';
 });
 
-fullNameInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') usernameInput.focus();
-});
-usernameInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') passwordInput.focus();
-});
-passwordInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') registerBtn.click();
-});
+// ===== تحميل الرسائل =====
+async function loadMessages() {
+    const chatId = getChatId(currentUser.id, currentChatPartner.id);
+    messagesDiv.innerHTML = '';
+    const local = loadLocal(chatId);
+    if (local.length) {
+        local.slice(-10).forEach(m => displayMessage(m.text || '', m.senderId === currentUser.id, m.time, m.id, m.replyTo, m.deleted, m.image, m.forwardedFrom));
+    }
+    const msgs = await getMsgs(chatId);
+    const newMsgs = [];
+    for (const msg of msgs) {
+        const isMine = msg.content.includes(currentUser.id);
+        const clean = msg.content.split(': ').pop() || msg.content;
+        if (!local.some(m => m.id === msg.id.toString())) {
+            newMsgs.push({ id: msg.id.toString(), text: clean, senderId: isMine ? currentUser.id : currentChatPartner.id, time: new Date(msg.timestamp*1000).toHoursMinutes() });
+        }
+    }
+    if (newMsgs.length) {
+        newMsgs.forEach(m => {
+            const isMine = m.senderId === currentUser.id;
+            displayMessage(m.text, isMine, m.time, m.id);
+        });
+        saveLocal(chatId, [...local, ...newMsgs]);
+    }
+    addChat(currentChatPartner.id);
+    saveChats();
+    if (unreadCounts[chatId]) { unreadCounts[chatId] = 0; saveUnread(); renderChats(); }
+    if (messageInterval) clearInterval(messageInterval);
+    let last = msgs.length;
+    messageInterval = setInterval(async () => {
+        if (currentChatPartner) {
+            const newMsgs = await getMsgs(chatId);
+            if (newMsgs.length > last) {
+                const latest = newMsgs.slice(last);
+                for (const msg of latest) {
+                    const isMine = msg.content.includes(currentUser.id);
+                    const clean = msg.content.split(': ').pop() || msg.content;
+                    const local2 = loadLocal(chatId);
+                    const nm = { id: msg.id.toString(), text: clean, senderId: isMine ? currentUser.id : currentChatPartner.id, time: new Date(msg.timestamp*1000).toHoursMinutes() };
+                    local2.push(nm);
+                    saveLocal(chatId, local2);
+                    displayMessage(clean, isMine, nm.time, nm.id);
+                    if (!isMine) {
+                        unreadCounts[chatId] = (unreadCounts[chatId] || 0) + 1;
+                        saveUnread();
+                        renderChats();
+                    }
+                }
+                last = newMsgs.length;
+                addChat(currentChatPartner.id);
+                saveChats();
+                renderChats();
+            }
+        }
+    }, 3000);
+}
 
-loginUsername.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') loginPassword.focus();
-});
-loginPassword.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') loginBtn.click();
-});
+// ===== عرض المحادثات =====
+function renderChats() {
+    chatsContainer.innerHTML = '';
+    const chats = loadChats();
+    const entries = Object.entries(chats);
+    if (!entries.length) {
+        chatsContainer.innerHTML = `<div class="empty-chats"><i class="fas fa-comment-dots"></i><p>لا توجد محادثات</p><span>ابحث عن أصدقائك</span></div>`;
+        return;
+    }
+    entries.sort((a,b) => {
+        const ta = a[1].lastMessage?.time || '00:00';
+        const tb = b[1].lastMessage?.time || '00:00';
+        return tb.localeCompare(ta);
+    });
+    for (const [chatId, data] of entries) {
+        const partner = findById(data.partnerId);
+        if (!partner) continue;
+        const local = loadLocal(chatId);
+        const last = local.length ? local[local.length-1] : null;
+        const unread = unreadCounts[chatId] || 0;
+        const div = document.createElement('div');
+        div.className = 'chat-item';
+        div.innerHTML = `
+            <div class="chat-avatar-small">${partner.avatar ? `<img src="${partner.avatar}" />` : `<i class="fas fa-user"></i>`}</div>
+            <div class="chat-item-info"><div class="chat-item-name">${partner.name}</div><div class="chat-item-last">${last ? (last.text || '📷') : 'ابدأ المحادثة'}</div></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="chat-item-time">${last ? last.time : ''}</div>
+                ${unread ? `<span class="unread-badge">${unread}</span>` : ''}
+            </div>
+        `;
+        div.addEventListener('click', () => {
+            unreadCounts[chatId] = 0;
+            saveUnread();
+            showChatScreen(partner);
+        });
+        chatsContainer.appendChild(div);
+    }
+}
 
-// ===== ✅ البحث (جلب من تليجرام) =====
+function saveUnread() { localStorage.setItem('fbchat_unread', JSON.stringify(unreadCounts)); }
+function loadUnread() {
+    const stored = localStorage.getItem('fbchat_unread');
+    if (stored) unreadCounts = JSON.parse(stored);
+}
+
+// ===== البحث عن المستخدمين =====
+async function searchUsersGlobal(query) {
+    if (!query || query.length < 2) return [];
+    const q = query.toLowerCase().trim();
+    
+    // من localStorage
+    const local = allUsers.filter(u => {
+        if (u.id === currentUser?.id) return false;
+        return (u.username || '').toLowerCase().includes(q) || (u.name || '').toLowerCase().includes(q);
+    });
+    
+    // من تليجرام
+    let tele = [];
+    try {
+        tele = await getTelegramUsers();
+    } catch(e) {}
+    
+    // دمج وإزالة تكرار
+    const all = [...local, ...tele];
+    const unique = [];
+    const seen = new Set();
+    for (const u of all) {
+        if (!seen.has(u.id)) {
+            seen.add(u.id);
+            const localUser = allUsers.find(x => x.id === u.id);
+            if (localUser) u.avatar = localUser.avatar;
+            unique.push(u);
+        }
+    }
+    
+    // فلترة
+    const results = unique.filter(u => {
+        if (u.id === currentUser?.id) return false;
+        return (u.username || '').toLowerCase().includes(q) || (u.name || '').toLowerCase().includes(q);
+    });
+    
+    return results;
+}
+
+function showSearchResults(results) {
+    searchResults.innerHTML = '';
+    searchResults.style.display = 'none';
+    if (!results || !results.length) {
+        searchResults.style.display = 'block';
+        searchResults.innerHTML = `<div style="padding:12px;color:#65676b;text-align:center;"><i class="fas fa-search"></i> لا توجد نتائج</div>`;
+        return;
+    }
+    searchResults.style.display = 'block';
+    for (const user of results) {
+        const div = document.createElement('div');
+        div.className = 'search-result-item';
+        div.innerHTML = `
+            <div class="avatar-result">${user.avatar ? `<img src="${user.avatar}" />` : `<i class="fas fa-user"></i>`}</div>
+            <div class="result-info"><div class="result-name">${user.name}</div><div class="result-username">@${user.username}</div></div>
+            <i class="fas fa-comment" style="color:#0084ff;"></i>
+        `;
+        div.addEventListener('click', () => {
+            searchResults.style.display = 'none';
+            searchInput.value = '';
+            let existing = findById(user.id);
+            if (!existing) {
+                existing = { id: user.id, name: user.name, username: user.username, avatar: user.avatar || '', online: false, lastSeen: new Date().toISOString() };
+                allUsers.push(existing);
+                saveUsers();
+            }
+            showChatScreen(existing);
+        });
+        searchResults.appendChild(div);
+    }
+}
+
+// ===== أحداث البحث =====
 searchInput.addEventListener('input', async (e) => {
-    const query = e.target.value.trim();
-    if (query.length >= 2) {
-        const results = await searchUsersGlobal(query);
+    const q = e.target.value.trim();
+    if (q.length >= 2) {
+        const results = await searchUsersGlobal(q);
         showSearchResults(results);
     } else {
         searchResults.style.display = 'none';
@@ -918,81 +563,55 @@ searchInput.addEventListener('input', async (e) => {
 });
 
 searchBtn.addEventListener('click', async () => {
-    const query = searchInput.value.trim();
-    if (query.length >= 2) {
-        const results = await searchUsersGlobal(query);
+    const q = searchInput.value.trim();
+    if (q.length >= 2) {
+        const results = await searchUsersGlobal(q);
         showSearchResults(results);
     }
 });
 
-// البحث بالضغط على Enter
 searchInput.addEventListener('keypress', async (e) => {
     if (e.key === 'Enter') {
-        const query = searchInput.value.trim();
-        if (query.length >= 2) {
-            const results = await searchUsersGlobal(query);
+        const q = searchInput.value.trim();
+        if (q.length >= 2) {
+            const results = await searchUsersGlobal(q);
             showSearchResults(results);
         }
     }
 });
 
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('#searchBar')) {
-        searchResults.style.display = 'none';
-    }
+    if (!e.target.closest('#searchBar')) searchResults.style.display = 'none';
 });
 
 // ===== إيموجي =====
-emojiBtn.addEventListener('click', (e) => {
+emojiBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'flex' : 'none';
 });
-
-emojiPicker.addEventListener('click', (e) => {
+emojiPicker?.addEventListener('click', (e) => {
     if (e.target.tagName === 'SPAN') {
         messageInput.value += e.target.textContent;
         messageInput.focus();
         emojiPicker.style.display = 'none';
     }
 });
-
-document.addEventListener('click', () => {
-    emojiPicker.style.display = 'none';
-});
+document.addEventListener('click', () => { if (emojiPicker) emojiPicker.style.display = 'none'; });
 
 // ===== صور =====
-imageBtn.addEventListener('click', () => imageInput.click());
-
-imageInput.addEventListener('change', async (e) => {
+imageBtn?.addEventListener('click', () => imageInput?.click());
+imageInput?.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (file && currentChatPartner) {
         const reader = new FileReader();
         reader.onload = async (e) => {
-            const imgData = e.target.result;
+            const data = e.target.result;
             const chatId = getChatId(currentUser.id, currentChatPartner.id);
-            
-            const msgId = displayMessage('', true, getCurrentTime(), null, null, false, imgData);
-            
-            await saveMessageToTelegram(
-                chatId, 
-                currentUser.id, 
-                currentUser.name, 
-                currentChatPartner.id, 
-                '📷 صورة',
-                'image'
-            );
-            
-            const localMsgs = loadLocalMessages(chatId);
-            localMsgs.push({
-                id: msgId,
-                text: '📷 صورة',
-                senderId: currentUser.id,
-                time: getCurrentTime(),
-                image: imgData,
-                deleted: false
-            });
-            saveLocalMessages(chatId, localMsgs);
-            
+            const id = displayMessage('', true, getCurrentTime(), null, null, false, data);
+            await saveMsg(chatId, currentUser.id, currentUser.name, currentChatPartner.id, '📷 صورة');
+            const local = loadLocal(chatId);
+            local.push({ id, text: '📷 صورة', senderId: currentUser.id, time: getCurrentTime(), image: data });
+            saveLocal(chatId, local);
             addChat(currentChatPartner.id);
             saveChats();
             renderChats();
@@ -1006,64 +625,21 @@ imageInput.addEventListener('change', async (e) => {
 sendBtn.addEventListener('click', async () => {
     const text = messageInput.value.trim();
     if (!text || !currentChatPartner) return;
-
     const chatId = getChatId(currentUser.id, currentChatPartner.id);
-    let replyTextContent = null;
-    let forwardedFrom = null;
-    
-    if (text.startsWith('📎 [معاد توجيهه]')) {
-        forwardedFrom = 'مستخدم آخر';
-    }
-    
-    const msgId = displayMessage(
-        text, 
-        true, 
-        getCurrentTime(), 
-        null, 
-        replyToMessage ? replyToMessage.text : null,
-        false,
-        null,
-        forwardedFrom
-    );
-    
+    const id = displayMessage(text, true, getCurrentTime(), null, replyToMessage?.text);
     messageInput.value = '';
-    
-    await saveMessageToTelegram(
-        chatId, 
-        currentUser.id, 
-        currentUser.name, 
-        currentChatPartner.id, 
-        text,
-        'text',
-        replyToMessage ? replyToMessage.text : null,
-        forwardedFrom
-    );
-    
-    const localMsgs = loadLocalMessages(chatId);
-    localMsgs.push({
-        id: msgId,
-        text: text,
-        senderId: currentUser.id,
-        time: getCurrentTime(),
-        replyTo: replyToMessage ? replyToMessage.text : null,
-        forwardedFrom: forwardedFrom,
-        deleted: false
-    });
-    saveLocalMessages(chatId, localMsgs);
-    
+    await saveMsg(chatId, currentUser.id, currentUser.name, currentChatPartner.id, text);
+    const local = loadLocal(chatId);
+    local.push({ id, text, senderId: currentUser.id, time: getCurrentTime(), replyTo: replyToMessage?.text });
+    saveLocal(chatId, local);
     addChat(currentChatPartner.id);
     saveChats();
-    
     replyToMessage = null;
     replyPreview.style.display = 'none';
-    forwardMessage = null;
-    
     renderChats();
 });
 
-messageInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendBtn.click();
-});
+messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendBtn.click(); });
 
 backToMainBtn.addEventListener('click', () => {
     if (messageInterval) clearInterval(messageInterval);
@@ -1075,59 +651,47 @@ backToMainBtn.addEventListener('click', () => {
     renderChats();
 });
 
-clearChatBtn.addEventListener('click', () => {
+clearChatBtn?.addEventListener('click', () => {
     if (!currentChatPartner) return;
-    if (confirm('هل تريد مسح كل الرسائل المحلية؟')) {
+    if (confirm('مسح كل الرسائل؟')) {
         const chatId = getChatId(currentUser.id, currentChatPartner.id);
-        localMessages[chatId] = [];
-        saveLocalMessages(chatId, []);
+        saveLocal(chatId, []);
         messagesDiv.innerHTML = '';
         renderChats();
     }
 });
 
 logoutBtn.addEventListener('click', () => {
-    if (confirm('هل تريد تسجيل الخروج؟')) {
-        if (currentUser) {
-            currentUser.online = false;
-            currentUser.lastSeen = new Date().toISOString();
-            saveUsers();
-        }
+    if (confirm('تسجيل الخروج؟')) {
+        if (currentUser) { currentUser.online = false; currentUser.lastSeen = new Date().toISOString(); saveUsers(); }
         localStorage.removeItem('fbchat_current_user');
-        location.reload();
+        showLoginScreen();
     }
 });
 
 // ===== بداية التشغيل =====
 loadUsers();
-loadUnreadCounts();
+loadUnread();
+Date.prototype.toHoursMinutes = function() { return this.getHours().toString().padStart(2,'0')+':'+this.getMinutes().toString().padStart(2,'0'); };
 
-Date.prototype.toHoursMinutes = function() {
-    return this.getHours().toString().padStart(2, '0') + ':' + 
-           this.getMinutes().toString().padStart(2, '0');
-};
-
-const savedUser = localStorage.getItem('fbchat_current_user');
-if (savedUser) {
-    const userData = JSON.parse(savedUser);
-    const userExists = findUserById(userData.id);
-    if (userExists) {
-        currentUser = userExists;
+const saved = localStorage.getItem('fbchat_current_user');
+if (saved) {
+    const data = JSON.parse(saved);
+    const user = findById(data.id);
+    if (user) {
+        currentUser = user;
         currentUser.online = true;
         currentUser.lastSeen = new Date().toISOString();
         saveUsers();
         showMainScreen();
     } else {
         localStorage.removeItem('fbchat_current_user');
-        loginScreen.style.display = 'none';
-        loginExistingScreen.style.display = 'block';
+        showLoginScreen();
     }
 } else {
-    loginScreen.style.display = 'block';
-    loginExistingScreen.style.display = 'none';
+    showLoginScreen();
 }
 
-console.log('💬 FB Chat - النسخة النهائية (مع تخزين المستخدمين في تليجرام)');
-console.log('👥 عدد المستخدمين المحليين:', allUsers.length);
-console.log('🔑 مستخدمين جاهزين: ahmed_123 / sara_456 (باسورد: 1234)');
-console.log('🌍 أي مستخدم يسجل هيظهر في البحث عند الجميع!');
+console.log('💬 FB Chat جاهز!');
+console.log('🔑 كل المستخدمين اتمسحوا - سجل حساب جديد');
+console.log('📝 اختر "إنشاء حساب جديد" أو "تسجيل الدخول"');
