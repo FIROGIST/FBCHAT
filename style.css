@@ -15,7 +15,7 @@ body {
 }
 
 /* ===== شاشة تسجيل الدخول ===== */
-#loginScreen {
+#loginScreen, #loginExistingScreen {
     width: 100%;
     max-width: 420px;
     padding: 20px;
@@ -117,12 +117,6 @@ body {
     background: #d2d4da;
 }
 
-.username-hint {
-    color: #65676b;
-    font-size: 16px;
-    padding-right: 10px;
-}
-
 .input-group {
     display: flex;
     align-items: center;
@@ -171,6 +165,27 @@ body {
     background: #006edb;
     transform: scale(1.02);
     box-shadow: 0 4px 12px rgba(0, 132, 255, 0.3);
+}
+
+.btn-secondary {
+    background: #e4e6eb;
+    color: #050505;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-secondary:hover {
+    background: #d2d4da;
+    transform: scale(1.02);
 }
 
 .divider {
@@ -303,6 +318,7 @@ body {
     z-index: 1000;
     max-height: 200px;
     overflow-y: auto;
+    display: none;
 }
 
 .search-result-item {
@@ -329,6 +345,7 @@ body {
     color: white;
     font-size: 16px;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .search-result-item .avatar-result img {
@@ -339,6 +356,7 @@ body {
 
 .search-result-item .result-info {
     flex: 1;
+    text-align: right;
 }
 
 .search-result-item .result-name {
@@ -436,6 +454,7 @@ body {
     color: white;
     font-size: 20px;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .chat-avatar img {
@@ -581,7 +600,7 @@ body {
 
 /* ===== Responsive ===== */
 @media (max-width: 520px) {
-    #loginScreen {
+    #loginScreen, #loginExistingScreen {
         padding: 10px;
     }
     .login-container {
